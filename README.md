@@ -54,7 +54,9 @@ mcparch --build
 **5. Añadir tu primera versión de Minecraft:**
 Necesitarás un archivo `.apk` compatible con la arquitectura **x86_64**.
 ```bash
-mcparch --add```
+mcparch --add
+```
+
 El script te pedirá la ruta al archivo `.apk` y un ID único para identificar esta versión (ej: `1.20.81`).
 
 ## Uso del Script
