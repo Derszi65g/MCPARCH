@@ -36,7 +36,8 @@ cd MCPARCH
 
 **2. Dar permisos de ejecución al script:**
 ```bash
-chmod +x mcparch```
+chmod +x mcparch
+```
 
 **3. Instalar a nivel de sistema:**
 Este comando copiará el script a `/usr/local/bin` e instalará el autocompletado para todos los usuarios.
