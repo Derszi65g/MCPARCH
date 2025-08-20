@@ -10,6 +10,14 @@
 
 ![](/assets/MENU.png)
 
+## SHORTCUT
+
+![](/assets/SHORTCUT.png)
+
+## TUI MODE
+
+![](/assets/TUI.png)
+
 -   **Compilación Automatizada:** Clona y compila `mcpelauncher-client` y `mcpelauncher-extract` desde el código fuente, resolviendo conflictos comunes de librerías (como `zlib` vs `zlib-ng`) de forma aislada y segura.
 -   **Gestión de Múltiples Versiones:** Instala y gestiona diferentes versiones del juego a partir de archivos `.apk`. ¡Cambia de una versión a otra con un simple comando!
 -   **Lanzador Inteligente:** Ejecuta tu versión favorita por defecto o te permite elegir cuál lanzar si tienes varias.
