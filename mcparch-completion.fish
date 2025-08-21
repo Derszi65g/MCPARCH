@@ -24,6 +24,7 @@ end
 complete -c mcparch -n "__fish_use_subcommand" -l run -d "Ejecuta una versión específica" -r -a "(__mcparch_get_versions)"
 complete -c mcparch -n "__fish_use_subcommand" -l set-default -d "Establece una versión como predeterminada" -r -a "(__mcparch_get_versions)"
 complete -c mcparch -n "__fish_use_subcommand" -l create-shortcut -d "Crea un acceso directo de escritorio" -r -a "(__mcparch_get_versions)"
+complete -c mcparch -n "__fish_use_subcommand" -l remove-version -d "Elimina una versión específica" -r -a "(__mcparch_get_versions)"
 
 
 # Abreviaciones (opcional, pero útil)
@@ -34,3 +35,4 @@ complete -c mcparch -n "__fish_use_subcommand" -s u -l uninstall
 complete -c mcparch -n "__fish_use_subcommand" -s i -l interactive
 complete -c mcparch -n "__fish_use_subcommand" -s h -l help
 complete -c mcparch -n "__fish_use_subcommand" -s r -l run
+complete -c mcparch -n "__fish_use_subcommand" -s d -l remove-version

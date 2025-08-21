@@ -87,11 +87,17 @@ Una vez instalado, puedes usar el comando `mcparch` con las siguientes opciones.
     ```bash
     mcparch --list
     ```
+-   **Eliminar una versión específica:**
+    **¡ADVERTENCIA!** Esto borrará los datos de esa versión del juego.
+    ```bash
+    # Uso: mcparch --remove-version <ID_DE_VERSION>
+    mcparch --remove-version 1.20.x.x
+    ```
 -   **Establecer una versión por defecto:**
     La versión por defecto se ejecutará cuando lances el script sin argumentos.
     ```bash
     # Uso: mcparch --set-default <ID_DE_VERSION>
-    mcparch --set-default 1.20.81
+    mcparch --set-default 1.20.x.x
     ```
 
 ### Ejecutar el Juego

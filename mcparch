@@ -321,6 +321,53 @@ function do_set_default_version() {
     print_success "Versión por defecto establecida a '$version_id'."
 }
 
+function do_remove_version() {
+    local version_id="$1"
+    local version_db_file="$VERSIONS_DB_DIR/$version_id"
+
+    if [ ! -f "$version_db_file" ]; then
+        print_error "El ID de versión '$version_id' no fue encontrado."
+        print_info "Usa '--list' para ver las versiones disponibles."
+        exit 1
+    fi
+
+    local game_path
+    game_path=$(cat "$version_db_file")
+
+    print_warning "ADVERTENCIA: Estás a punto de eliminar permanentemente la versión '$version_id'."
+    print_warning "Esto borrará los datos del juego en '$game_path'."
+    read -p "¿Estás seguro de que deseas continuar? (s/n): " choice
+    case "$choice" in
+        [Ss]*) 
+            print_info "Eliminando versión '$version_id'வுகளை..."
+
+            # Eliminar el directorio del juego
+            if [ -d "$game_path" ]; then
+                rm -rf "$game_path"
+                print_success "Directorio de datos del juego eliminado."
+            else
+                print_warning "No se encontró el directorio de datos del juego. Puede que ya haya sido eliminado."
+            fi
+
+            # Eliminar el archivo de la base de datos
+            rm -f "$version_db_file"
+            print_success "Registro de la versión eliminado."
+
+            # Comprobar si era la versión por defecto
+            if [ "$DEFAULT_VERSION_ID" = "$version_id" ]; then
+                print_info "La versión eliminada era la predeterminada. Limpiando configuración..."
+                sed -i "s/^DEFAULT_VERSION_ID=.*/DEFAULT_VERSION_ID=\"\"/" "$CONFIG_FILE"
+                print_success "La versión por defecto ha sido reiniciada."
+            fi
+
+            print_success "Versión '$version_id' eliminada correctamente."
+            ;; 
+        *)
+            print_info "Operación cancelada."
+            ;; 
+    esac
+}
+
 
 # --- Funciones de Juego (Actualizadas) ---
 
@@ -330,7 +377,7 @@ function run_game() {
         print_error "La ruta del juego no es válida."
         exit 1
     fi
-    print_info "Iniciando Minecraft desde '$game_path'..."
+    print_info "Iniciando Minecraft desde '$game_path' நான"
     mcpelauncher-client -dg "$game_path" || true
     print_success "El juego se ha cerrado."
 }
@@ -371,10 +418,10 @@ function ask_and_cleanup_dir() {
             else
                 print_error "No se pudo eliminar el directorio '$dir_path'."
             fi
-            ;; 
+            ;;
         *)
             print_info "Se conservó el directorio de $dir_description."
-            ;; 
+            ;;
     esac
 }
 
@@ -383,7 +430,7 @@ function uninstall_component() {
     local build_dir="$2"
     local manifest_file="$build_dir/install_manifest.txt"
 
-    print_info "Buscando manifiesto para '$component_name' en '$manifest_file'..."
+    print_info "Buscando manifiesto para '$component_name' en '$manifest_file' நான"
     if [ ! -f "$manifest_file" ]; then
         print_warning "No se encontró el manifiesto. '$component_name' probablemente no fue instalado."
         return
@@ -410,22 +457,34 @@ function show_interactive_menu() {
         echo "========================="
         echo "  1. Jugar a Minecraft"
         echo "  2. Añadir nueva versión (.apk)"
-        echo "  3. Listar versiones instaladas"
-        echo "  4. Compilar / Actualizar componentes"
-        echo "  5. Limpiar archivos de compilación"
-        echo "  6. Desinstalar todo"
-        echo "  7. Salir"
+        echo "  3. Eliminar una versión"
+        echo "  4. Listar versiones instaladas"
+        echo "  5. Compilar / Actualizar componentes"
+        echo "  6. Limpiar archivos de compilación"
+        echo "  7. Desinstalar todo"
+        echo "  8. Salir"
         echo "-------------------------"
         read -p "Elige una opción: " choice
 
         case "$choice" in
             1) do_launch ;;
             2) do_add_version ;;
-            3) do_list_versions ;;
-            4) do_build ;;
-            5) do_cleanup_sources ;;
-            6) do_uninstall ;;
-            7) print_info "Saliendo..."; exit 0 ;;
+            3) 
+                do_list_versions
+                if [ $? -eq 0 ]; then
+                    read -p "Ingresa el ID de la versión a eliminar: " version_id_to_remove
+                    if [ -n "$version_id_to_remove" ]; then
+                        do_remove_version "$version_id_to_remove"
+                    else
+                        print_error "No se ingresó ningún ID."
+                    fi
+                fi
+                ;;
+            4) do_list_versions ;;
+            5) do_build ;;
+            6) do_cleanup_sources ;;
+            7) do_uninstall ;;
+            8) print_info "Saliendo..."; exit 0 ;;
             *) print_error "Opción no válida. Intenta de nuevo." ;;
         esac
         echo
@@ -451,6 +510,7 @@ function show_usage() {
     echo "Gestión de Versiones:"
     echo "  -a, --add          Añade una nueva versión de Minecraft desde un archivo .apk."
     echo "  -l, --list         Lista todas las versiones de Minecraft instaladas."
+    echo "  -d, --remove-version <ID> Elimina una versión específica por su ID."
     echo "  -r, --run <ID>     Ejecuta una versión específica de Minecraft por su ID."
     echo "  --set-default <ID> Establece una versión como predeterminada para ejecutar sin argumentos."
     echo "  --create-shortcut <ID> Crea un acceso directo en el menú de aplicaciones."
@@ -614,7 +674,7 @@ function do_launch() {
     if [ -n "$DEFAULT_VERSION_ID" ]; then
         local version_file="$VERSIONS_DB_DIR/$DEFAULT_VERSION_ID"
         if [ -f "$version_file" ]; then
-            print_info "Iniciando versión por defecto '$DEFAULT_VERSION_ID'..."
+            print_info "Iniciando versión por defecto '$DEFAULT_VERSION_ID' நான"
             local game_path
             game_path=$(cat "$version_file")
             run_game "$game_path"
@@ -624,7 +684,7 @@ function do_launch() {
         fi
     fi
 
-    local version_files=($"$VERSIONS_DB_DIR"/*)
+    local version_files=("$VERSIONS_DB_DIR"/*)
     local num_versions=${#version_files[@]}
 
     # Si el directorio está vacío o solo contiene un patron sin expandir
@@ -759,14 +819,12 @@ function do_install_completion() {
                 print_success "El autocompletado para Bash ya está instalado."
             else
                 print_info "Añadiendo autocompletado a '$config_file'ப்பான"
-                echo -e "
-# Autocompletado para MCPARCH
-$source_line" >> "$config_file"
+                echo -e "\n# Autocompletado para MCPARCH\n$source_line" >> "$config_file"
                 print_success "¡Instalación completada!"
                 print_info "Por favor, reinicia tu terminal o ejecuta 'source $config_file' para activarlo."
             fi
             ;; 
-        zsh)
+        zsh) 
             local config_file="$HOME/.zshrc"
             local source_line="source \"$script_dir/mcparch-completion.bash\""
             local bashcomp_line="autoload -U +X bashcompinit && bashcompinit"
@@ -787,8 +845,7 @@ $source_line" >> "$config_file"
             fi
 
             print_info "Añadiendo autocompletado a '$config_file'ப்பான"
-            echo -e "
-# Autocompletado para MCPARCH" >> "$config_file"
+            echo -e "\n# Autocompletado para MCPARCH" >> "$config_file"
             if $needs_bashcomp; then
                 echo "$bashcomp_line" >> "$config_file"
             fi
@@ -798,7 +855,7 @@ $source_line" >> "$config_file"
             print_success "¡Instalación completada!"
             print_info "Por favor, reinicia tu terminal o ejecuta 'source $config_file' para activarlo."
             ;; 
-        fish)
+        fish) 
             local completions_dir="$HOME/.config/fish/completions"
             local target_file="$completions_dir/mcparch.fish"
             
@@ -852,9 +909,17 @@ function main() {
             -a|--add)
                 do_add_version
                 exit 0
-                ;;
+                ;; 
             -l|--list)
                 do_list_versions
+                exit 0
+                ;;
+            -d|--remove-version)
+                if [ -z "${2-}" ]; then
+                    print_error "La opción '--remove-version' requiere un ID de versión como argumento."
+                    exit 1
+                fi
+                do_remove_version "$2"
                 exit 0
                 ;;
             -r|--run)
@@ -864,7 +929,7 @@ function main() {
                 fi
                 do_run_specific "$2"
                 exit 0
-                ;;
+                ;; 
             --set-default)
                 if [ -z "${2-}" ]; then
                     print_error "La opción '--set-default' requiere un ID de versión como argumento."
@@ -872,7 +937,7 @@ function main() {
                 fi
                 do_set_default_version "$2"
                 exit 0
-                ;;
+                ;; 
             --create-shortcut)
                 if [ -z "${2-}" ]; then
                     print_error "La opción '--create-shortcut' requiere un ID de versión como argumento."
@@ -880,7 +945,7 @@ function main() {
                 fi
                 do_create_shortcut "$2"
                 exit 0
-                ;;
+                ;; 
             -b|--build)
                 _action_build=true # Solo marcamos la acción
                 shift
@@ -888,15 +953,15 @@ function main() {
             --cleanup)
                 CLEANUP_AFTER_BUILD=true # Marcamos la opción de limpieza
                 shift
-                ;;
+                ;; 
             -u|--uninstall)
                 do_uninstall
                 exit 0
-                ;;
+                ;; 
             --uninstall-system)
                 do_uninstall_system
                 exit 0
-                ;;
+                ;; 
             -h|--help)
                 show_usage
                 exit 0
@@ -904,373 +969,15 @@ function main() {
             -i|--interactive)
                 show_interactive_menu
                 exit 0
-                ;;
+                ;; 
             --install)
                 do_install "$@"
                 exit 0
-                ;;
+                ;; 
             --install-completion)
                 do_install_completion
                 exit 0
-                ;;
-            *)
-                print_error "Opción no reconocida: $1"
-                show_usage
-                exit 1
                 ;; 
-        esac
-    done
-
-    # Fase 2: Ejecutar las acciones marcadas.
-    if [ "$_action_build" = true ]; then
-        do_build
-    elif [ "$CLEANUP_AFTER_BUILD" = true ]; then
-        do_cleanup_sources
-    fi
-}
-
-main "$@"
-
-
-function do_build() {
-    print_info "Iniciando proceso de compilación completo..."
-    setup_environment
-    check_dependencies
-    compile_extractor
-    compile_launcher
-    print_success "¡Proceso de compilación completado!"
-    print_info "Todos los componentes necesarios están instalados."
-
-    if [ "$CLEANUP_AFTER_BUILD" = true ]; then
-        do_cleanup_sources
-    fi
-}
-
-function do_cleanup_sources() {
-    print_info "Limpiando los directorios de código fuente..."
-    if [ -d "$ROOT_SOURCE" ]; then
-        rm -rf "$ROOT_SOURCE"
-        print_success "Directorios de compilación eliminados."
-    else
-        print_warning "El directorio de código fuente '$ROOT_SOURCE' no existe. No hay nada que limpiar."
-    fi
-}
-
-function do_uninstall() {
-    print_info "Iniciando el proceso de desinstalación..."
-    if [ "$(id -u)" -eq 0 ]; then
-        print_error "Este script no debe ser ejecutado como root directamente."
-        exit 1
-    fi
-    if ! command -v sudo &> /dev/null; then
-        print_error "El comando 'sudo' no se encuentra. Se necesitan privilegios de administrador."
-        exit 1
-    fi
-
-    uninstall_component "mcpelauncher-client" "$LAUNCHER_BUILD_DIR"
-    echo
-    uninstall_component "mcpelauncher-extract" "$EXTRACTOR_BUILD_DIR"
-    echo
-    cleanup_desktop_integration
-    ask_and_cleanup_dir "datos del juego" "$GAME_DATA_DIR"
-    ask_and_cleanup_dir "código fuente" "$ROOT_SOURCE"
-    # Limpiar nuestra configuración también
-    ask_and_cleanup_dir "configuración de mcparch" "$CONFIG_DIR"
-    echo
-    print_success "Proceso de desinstalación completado."
-}
-
-function do_launch() {
-    print_info "Iniciando en modo lanzador..."
-    if ! command -v mcpelauncher-client &> /dev/null; then
-        print_error "Comando 'mcpelauncher-client' no encontrado."
-        print_error "Por favor, ejecuta el script con la opción '-b' para compilar los componentes primero."
-        exit 1
-    fi
-
-    # Comprobar si hay una versión por defecto
-    if [ -n "$DEFAULT_VERSION_ID" ]; then
-        local version_file="$VERSIONS_DB_DIR/$DEFAULT_VERSION_ID"
-        if [ -f "$version_file" ]; then
-            print_info "Iniciando versión por defecto '$DEFAULT_VERSION_ID'..."
-            local game_path
-            game_path=$(cat "$version_file")
-            run_game "$game_path"
-            return
-        else
-            print_warning "La versión por defecto '$DEFAULT_VERSION_ID' no se encontró. Ignorando."
-        fi
-    fi
-
-    local version_files=("$VERSIONS_DB_DIR"/*)
-    local num_versions=${#version_files[@]}
-
-    # Si el directorio está vacío o solo contiene un patron sin expandir
-    if [ "$num_versions" -eq 1 ] && [ ! -e "${version_files[0]}" ]; then
-        num_versions=0
-    fi
-    
-    if [ "$num_versions" -eq 0 ]; then
-        print_error "No hay ninguna versión de Minecraft instalada."
-        print_info "Usa la opción '--add' para añadir tu primera versión."
-        exit 1
-    elif [ "$num_versions" -eq 1 ]; then
-        print_info "Se encontró una única versión. Iniciando automáticamente."
-        local game_path
-        game_path=$(cat "${version_files[0]}")
-        run_game "$game_path"
-    else
-        print_info "Se encontraron varias versiones. Por favor, elige cuál ejecutar:"
-        do_list_versions
-        local choice
-        read -p "Ingresa el número de la versión que quieres ejecutar: " choice
-        if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "$num_versions" ]; then
-            local selected_version_file="${version_files[$((choice - 1))]}"
-            local game_path
-            game_path=$(cat "$selected_version_file")
-            run_game "$game_path"
-        else
-            print_error "Selección no válida."
-            exit 1
-        fi
-    fi
-}
-
-function do_run_specific() {
-    local version_id="$1"
-    local version_file="$VERSIONS_DB_DIR/$version_id"
-    if [ ! -f "$version_file" ]; then
-        print_error "El ID de versión '$version_id' no fue encontrado."
-        print_info "Usa '--list' para ver las versiones disponibles."
-        exit 1
-    fi
-
-    if ! command -v mcpelauncher-client &> /dev/null; then
-        print_error "Comando 'mcpelauncher-client' no encontrado."
-        print_error "Por favor, ejecuta el script con la opción '-b' para compilar los componentes primero."
-        exit 1
-    fi
-
-    local game_path
-    game_path=$(cat "$version_file")
-    run_game "$game_path"
-}
-
-function install_icon_if_needed() {
-    local icon_name="mcparch"
-    local icon_dir="$HOME/.local/share/icons/hicolor/scalable/apps"
-    local icon_file="$icon_dir/$icon_name.svg"
-
-    if [ -f "$icon_file" ]; then
-        return # El icono ya existe
-    fi
-
-    print_info "Instalando el icono de la aplicación por primera vez..."
-    mkdir -p "$icon_dir"
-    echo "$MCPARCH_ICON_SVG" > "$icon_file"
-    
-    # Actualizar la caché de iconos (opcional, pero buena práctica)
-    if command -v gtk-update-icon-cache &> /dev/null; then
-        gtk-update-icon-cache -f -t "$HOME/.local/share/icons/hicolor" || true
-    fi
-    print_success "Icono instalado en '$icon_file'."
-}
-
-function do_create_shortcut() {
-    local version_id="$1"
-    local version_file="$VERSIONS_DB_DIR/$version_id"
-    if [ ! -f "$version_file" ]; then
-        print_error "El ID de versión '$version_id' no fue encontrado."
-        print_info "Usa '--list' para ver las versiones disponibles."
-        exit 1
-    fi
-
-    # Asegurarse de que el icono está instalado
-    install_icon_if_needed
-
-    local desktop_dir="$HOME/.local/share/applications"
-    mkdir -p "$desktop_dir"
-    local shortcut_file="$desktop_dir/mcparch-$version_id.desktop"
-    
-    # Obtener la ruta absoluta del script
-    local script_path
-    script_path=$(realpath "$0")
-
-    print_info "Creando acceso directo para la versión '$version_id'..."
-
-    cat > "$shortcut_file" << EOF
-[Desktop Entry]
-Version=1.0
-Name=Minecraft PE ($version_id)
-Comment=Lanza Minecraft PE usando MCPARCH
-Exec=$script_path --run $version_id
-Icon=mcparch
-Terminal=false
-Type=Application
-Categories=Game;
-EOF
-
-    # Hacer el archivo ejecutable
-    chmod +x "$shortcut_file"
-
-    print_success "Acceso directo creado en '$shortcut_file'."
-    print_info "Puede que necesites reiniciar tu sesión para que aparezca en el menú de aplicaciones."
-}
-
-function do_install_completion() {
-    print_info "Instalando autocompletado para el shell..."
-    
-    local shell_name
-    shell_name=$(basename "$SHELL")
-    
-    local script_dir
-    script_dir=$(dirname "$(realpath "$0")")
-
-    case "$shell_name" in
-        bash) 
-            local config_file="$HOME/.bashrc"
-            local source_line="source \"$script_dir/mcparch-completion.bash\""
-            if grep -qF "$source_line" "$config_file"; then
-                print_success "El autocompletado para Bash ya está instalado."
-            else
-                print_info "Añadiendo autocompletado a '$config_file'ப்பான"
-                echo -e "\n# Autocompletado para MCPARCH\n$source_line" >> "$config_file"
-                print_success "¡Instalación completada!"
-                print_info "Por favor, reinicia tu terminal o ejecuta 'source $config_file' para activarlo."
-            fi
-            ;; 
-        zsh)
-            local config_file="$HOME/.zshrc"
-            local source_line="source \"$script_dir/mcparch-completion.bash\""
-            local bashcomp_line="autoload -U +X bashcompinit && bashcompinit"
-
-            local needs_bashcomp=false
-            if ! grep -q "bashcompinit" "$config_file"; then
-                needs_bashcomp=true
-            fi
-
-            local needs_source=false
-            if ! grep -qF "$source_line" "$config_file"; then
-                needs_source=true
-            fi
-
-            if ! $needs_bashcomp && ! $needs_source; then
-                 print_success "El autocompletado para Zsh ya está instalado."
-                 return
-            fi
-
-            print_info "Añadiendo autocompletado a '$config_file'ப்பான"
-            echo -e "\n# Autocompletado para MCPARCH" >> "$config_file"
-            if $needs_bashcomp; then
-                echo "$bashcomp_line" >> "$config_file"
-            fi
-            if $needs_source; then
-                echo "$source_line" >> "$config_file"
-            fi
-            print_success "¡Instalación completada!"
-            print_info "Por favor, reinicia tu terminal o ejecuta 'source $config_file' para activarlo."
-            ;; 
-        fish)
-            local completions_dir="$HOME/.config/fish/completions"
-            local target_file="$completions_dir/build_safe.sh.fish"
-            
-            if [ -f "$target_file" ]; then
-                print_success "El autocompletado para Fish ya está instalado."
-                return
-            fi
-            
-            print_info "Instalando autocompletado para Fish..."
-            mkdir -p "$completions_dir"
-            cp "$script_dir/mcparch-completion.fish" "$target_file"
-            print_success "¡Instalación completada!"
-            print_info "Por favor, reinicia tu terminal para activar el autocompletado."
-            ;; 
-        *)
-            print_error "Shell '$shell_name' no soportado para la instalación automática."
-            print_info "Puedes instalarlo manualmente añadiendo la siguiente línea a tu archivo de configuración:"
-            echo "  source \"$script_dir/mcparch-completion.bash\""
-            ;; 
-    esac
-}
-
-
-# --- Flujo Principal del Script ---
-function main() {
-    # Asegurarse de que los directorios de config existen al inicio
-    mkdir -p "$CONFIG_DIR"
-    mkdir -p "$VERSIONS_DB_DIR"
-
-    # Cargar configuración
-    ensure_config_exists
-    source "$CONFIG_FILE"
-
-    # --- NUEVO: Procesamiento de argumentos en dos fases ---
-    # Fase 1: Leer todos los argumentos y establecer flags.
-    local _action_build=false
-    
-    if [ $# -eq 0 ]; then
-        do_launch
-        exit 0
-    fi
-
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            -a|--add)
-                do_add_version
-                shift
-                ;;
-            -l|--list)
-                do_list_versions
-                shift
-                ;;
-            -r|--run)
-                if [ -z "${2-}" ]; then
-                    print_error "La opción '--run' requiere un ID de versión como argumento."
-                    exit 1
-                fi
-                do_run_specific "$2"
-                shift 2
-                ;;
-            --set-default)
-                if [ -z "${2-}" ]; then
-                    print_error "La opción '--set-default' requiere un ID de versión como argumento."
-                    exit 1
-                fi
-                do_set_default_version "$2"
-                shift 2
-                ;;
-            --create-shortcut)
-                if [ -z "${2-}" ]; then
-                    print_error "La opción '--create-shortcut' requiere un ID de versión como argumento."
-                    exit 1
-                fi
-                do_create_shortcut "$2"
-                shift 2
-                ;;
-            -b|--build)
-                _action_build=true # Solo marcamos la acción
-                shift
-                ;; 
-            --cleanup)
-                CLEANUP_AFTER_BUILD=true # Marcamos la opción de limpieza
-                shift
-                ;;
-            -u|--uninstall)
-                do_uninstall
-                shift
-                ;; 
-            -h|--help)
-                show_usage
-                shift
-                ;; 
-            -i|--interactive)
-                show_interactive_menu
-                shift
-                ;;
-            --install-completion)
-                do_install_completion
-                shift
-                ;;
             *)
                 print_error "Opción no reconocida: $1"
                 show_usage

@@ -8,15 +8,16 @@ _mcparch_completions() {
     prev_word="${COMP_WORDS[COMP_CWORD-1]}"
 
     # Opciones que no esperan un ID de versión
-    local opts_no_arg="-a --add -l --list -b --build --cleanup -u --uninstall --uninstall-system -i --interactive -h --help --install --install-completion"    # Opciones que SÍ esperan un ID de versión
-    local opts_with_arg="-r --run --set-default --create-shortcut"
+    local opts_no_arg="-a --add -l --list -b --build --cleanup -u --uninstall --uninstall-system -i --interactive -h --help --install --install-completion"
+    # Opciones que SÍ esperan un ID de versión
+    local opts_with_arg="-r --run --set-default --create-shortcut -d --remove-version"
     local all_opts="$opts_no_arg $opts_with_arg"
 
     local versions_db_dir="$HOME/.config/mcparch/versions_db"
 
     # Sugerir IDs de versión si el comando anterior lo requiere
     case "$prev_word" in
-        -r|--run|--set-default|--create-shortcut)
+        -r|--run|--set-default|--create-shortcut|-d|--remove-version)
             if [ -d "$versions_db_dir" ]; then
                 local versions
                 versions=$(ls "$versions_db_dir")
