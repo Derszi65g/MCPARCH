@@ -569,7 +569,7 @@ function do_update() {
     local local_version
     local_version=$(git describe --tags --always --dirty=-modified)
     local remote_version
-    remote_version=$(git describe --tags --always "origin/$main_branch" --dirty=-modified)
+    remote_version=$(git describe --tags --always "origin/$main_branch")
 
     # MEJORA: Comparar los commits reales para más fiabilidad
     local local_commit
