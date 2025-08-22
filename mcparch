@@ -582,20 +582,37 @@ function do_update() {
         exit 0
     fi
 
+    # NUEVO: Lógica mejorada para comparar versiones
+    local base_commit
+    base_commit=$(git merge-base HEAD "origin/$main_branch")
+
+    if [ "$base_commit" = "$remote_commit" ]; then
+        print_success "Estás por delante de la versión remota. Tienes commits locales que no se han subido."
+        print_info "  Tu versión: $local_version"
+        print_info "  Versión remota: $remote_version"
+        print_info "Usa 'git push' para publicar tus cambios."
+        exit 0
+    fi
+
+    if [ "$base_commit" != "$local_commit" ]; then
+        print_warning "Tu rama local y la rama remota han divergido."
+        print_info "La actualización forzará tu copia local para que coincida con la remota, descartando tus cambios."
+    fi
+
     print_info "¡Hay una nueva versión disponible!"
     print_info "  Versión actual: $local_version"
     print_info "  Nueva versión:  $remote_version"
     echo
     print_info "Cambios:"
     echo "--------------------------------------------------"
-    git log --pretty=format:"- %s (%an, %ar)" "$local_commit..$remote_commit"
+    git log --pretty=format:"- %s (por %an, %ar)" "$local_commit..$remote_commit"
     echo "--------------------------------------------------"
 
     read -p "¿Deseas actualizar ahora? (s/n): " choice
     case "$choice" in
         [Ss]*)
-            print_info "Actualizando el script..."
-            if ! git pull --rebase origin "$main_branch"; then
+            print_info "Actualizando el script de forma forzada (git reset --hard)..."
+            if ! git reset --hard "origin/$main_branch"; then
                 print_error "La actualización falló. Por favor, revisa los errores de Git."
                 exit 1
             fi
