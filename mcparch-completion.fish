@@ -11,6 +11,7 @@ complete -c mcparch -n "__fish_use_subcommand" -l interactive -d "Abre el menú 
 complete -c mcparch -n "__fish_use_subcommand" -l help -d "Muestra el mensaje de ayuda"
 complete -c mcparch -n "__fish_use_subcommand" -l install -d "Instala el script a nivel de sistema"
 complete -c mcparch -n "__fish_use_subcommand" -l install-completion -d "Instala el autocompletado para tu shell"
+complete -c mcparch -n "__fish_use_subcommand" -l update -d "Busca y aplica actualizaciones para el script"
 
 # Función para obtener las versiones instaladas
 function __mcparch_get_versions
