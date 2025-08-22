@@ -135,7 +135,11 @@ Una vez instalado, puedes usar el comando `mcparch` con las siguientes opciones.
 -   **Crear un acceso directo en el escritorio:**
     ```bash
     # Uso: mcparch --create-shortcut <ID_DE_VERSION>
-    mcparch --create-shortcut 1.20.81
+    mcparch --create-shortcut 1.20.x.x
+    ```
+-   **Actualizar el script a la última versión:**
+    ```bash
+    mcparch --update
     ```
 -   **Compilar o actualizar los componentes:**
     ```bash
