@@ -535,13 +535,6 @@ function do_build() {
     fi
 }
 
-# NUEVO: Función para obtener un nombre de versión limpio
-function get_clean_version_string() {
-    local ref="$1"
-    # Intenta obtener un tag exacto. Si falla, usa el hash corto.
-    git describe --tags --exact-match "$ref" 2>/dev/null || git rev-parse --short "$ref"
-}
-
 function do_update() {
     print_info "Buscando actualizaciones para mcparch..."
 
@@ -572,11 +565,11 @@ function do_update() {
         exit 1
     fi
 
-    # MEJORA: Usar la nueva función para versiones limpias
+    # MEJORA: Usar git describe para obtener versiones legibles
     local local_version
-    local_version=$(get_clean_version_string HEAD)
+    local_version=$(git describe --tags --always --dirty=-modified)
     local remote_version
-    remote_version=$(get_clean_version_string "origin/$main_branch")
+    remote_version=$(git describe --tags --always "origin/$main_branch")
 
     # MEJORA: Comparar los commits reales para más fiabilidad
     local local_commit
@@ -625,7 +618,7 @@ function do_update() {
             fi
 
             local new_version
-            new_version=$(get_clean_version_string HEAD)
+            new_version=$(git describe --tags --always)
             print_success "El script ha sido actualizado a la versión $new_version."
 
             if command -v mcparch &> /dev/null; then
