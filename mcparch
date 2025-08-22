@@ -605,7 +605,7 @@ function do_update() {
     echo
     print_info "Cambios:"
     echo "--------------------------------------------------"
-    git log --pretty=format:"- %s (por %an, %ar)" "$local_commit..$remote_commit"
+    git --no-pager log --pretty=format:"- %s (por %an, %ar)" "$local_commit..$remote_commit"
     echo "--------------------------------------------------"
 
     read -p "¿Deseas actualizar ahora? (s/n): " choice
