@@ -572,16 +572,16 @@ function do_update() {
     echo
     print_info "Cambios:"
     echo "--------------------------------------------------"
-    # Usamos un formato legible para el log
-    git log --pretty=format:"- %s (%an, %ar)" "$current_version..$latest_version"
+    # Usamos un formato legible para el log, comparando HEAD con la rama remota
+    git log --pretty=format:"- %s (%an, %ar)" "HEAD..origin/$main_branch"
     echo "--------------------------------------------------"
 
     read -p "¿Deseas actualizar ahora? (s/n): " choice
     case "$choice" in
         [Ss]*)
             print_info "Actualizando el script..."
-            # Hacer pull para traer los cambios
-            if ! git pull origin "$main_branch"; then
+            # Usamos --rebase para evitar un "merge commit" y el editor de texto
+            if ! git pull --rebase origin "$main_branch"; then
                 print_error "La actualización falló. Por favor, revisa los errores de Git."
                 exit 1
             fi
