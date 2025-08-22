@@ -17,7 +17,9 @@ set -u
 set -o pipefail
 
 # --- Variables Globales ---
-readonly MCPARCH_ICON_SVG='<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg version="1.1" width="512" height="512" viewBox="0 0 512 512" id="svg1" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg"><defs id="defs1" /><path id="bg1" fill="#81563a" d="M 0,0 H 512 V 512 H 0 Z" /><path id="bg2" fill="#61b441" d="M 0,0 V 128 H 64 V 64 H 128 V 128 H 256 V 192 H 320 V 128 H 384 V 64 H 448 V 192 H 512 V 0 Z" /><rect id="rect1" width="64" height="64" x="0" y="0" fill="#86d562" /><rect id="rect2" width="64" height="64" x="64" y="0" fill="#52a535" /><rect id="rect3" width="64" height="64" x="128" y="0" fill="#6cc349" /><rect id="rect4" width="64" height="64" x="192" y="0" fill="#86d562" /><rect id="rect5" width="64" height="64" x="256" y="0" fill="#6cc349" /><rect id="rect6" width="64" height="64" x="320" y="0" fill="#52a535" /><rect id="rect7" width="64" height="64" x="384" y="0" fill="#6cc349" /><rect id="rect8" width="64" height="64" x="448" y="0" fill="#52a535" /><rect id="rect9" width="64" height="64" x="0" y="64" fill="#52a535" /><rect id="rect10" width="64" height="64" x="64" y="64" fill="#66412c" /><rect id="rect11" width="64" height="64" x="128" y="64" fill="#52a535" /><rect id="rect12" width="64" height="64" x="192" y="64" fill="#3c8527" /><rect id="rect13" width="64" height="64" x="256" y="64" fill="#52a535" /><rect id="rect14" width="64" height="64" x="320" y="64" fill="#6cc349" /><rect id="rect15" width="64" height="64" x="384" y="64" fill="#66412c" /><rect id="rect16" width="64" height="64" x="448" y="64" fill="#6cc349" /><rect id="rect17" width="64" height="64" x="0" y="128" fill="#66412c" /><rect id="rect18" width="64" height="64" x="64" y="128" fill="#998f8b" /><rect id="rect19" width="64" height="64" x="128" y="128" fill="#66412c" /><rect id="rect20" width="64" height="64" x="192" y="128" fill="#66412c" /><rect id="rect21" width="64" height="64" x="256" y="128" fill="#6cc349" /><rect id="rect22" width="64" height="64" x="320" y="128" fill="#66412c" /><rect id="rect23" width="64" height="64" x="384" y="128" fill="#805539" /><rect id="rect24" width="64" height="64" x="448" y="128" fill="#52a535" /><rect id="rect25" width="64" height="64" x="0" y="192" fill="#976746" /><rect id="rect26" width="64" height="64" x="64" y="192" fill="#805539" /><rect id="rect27" width="64" height="64" x="128" y="192" fill="#976746" /><rect id="rect28" width="64" height="64" x="192" y="192" fill="#ad7a54" /><rect id="rect29" width="64" height="64" x="256" y="192" fill="#66412c" /><rect id="rect30" width="64" height="64" x="320" y="192" fill="#805539" /><rect id="rect31" width="64" height="64" x="384" y="192" fill="#976746" /><rect id="rect32" width="64" height="64" x="448" y="192" fill="#66412c" /><rect id="rect33" width="64" height="64" x="0" y="256" fill="#805539" /><rect id="rect34" width="64" height="64" x="64" y="256" fill="#66412c" /><rect id="rect35" width="64" height="64" x="128" y="256" fill="#66412c" /><rect id="rect36" width="64" height="64" x="192" y="256" fill="#976746" /><rect id="rect37" width="64" height="64" x="256" y="256" fill="#805539" /><rect id="rect38" width="64" height="64" x="320" y="256" fill="#ad7a54" /><rect id="rect39" width="64" height="64" x="384" y="256" fill="#66412c" /><rect id="rect40" width="64" height="64" x="448" y="256" fill="#66412c" /><rect id="rect41" width="64" height="64" x="0" y="320" fill="#ad7a54" /><rect id="rect42" width="64" height="64" x="64" y="320" fill="#805539" /><rect id="rect43" width="64" height="64" x="128" y="320" fill="#66412c" /><rect id="rect44" width="64" height="64" x="192" y="320" fill="#66412c" /><rect id="rect45" width="64" height="64" x="256" y="320" fill="#998f8b" /><rect id="rect46" width="64" height="64" x="320" y="320" fill="#805539" /><rect id="rect47" width="64" height="64" x="384" y="320" fill="#976746" /><rect id="rect48" width="64" height="64" x="448" y="320" fill="#805539" /><rect id="rect49" width="64" height="64" x="0" y="384" fill="#805539" /><rect id="rect50" width="64" height="64" x="64" y="384" fill="#976746" /><rect id="rect51" width="64" height="64" x="128" y="384" fill="#66412c" /><rect id="rect52" width="64" height="64" x="192" y="384" fill="#ad7a54" /><rect id="rect53" width="64" height="64" x="256" y="384" fill="#976746" /><rect id="rect54" width="64" height="64" x="320" y="384" fill="#ad7a54" /><rect id="rect55" width="64" height="64" x="384" y="384" fill="#805539" /><rect id="rect56" width="64" height="64" x="448" y="384" fill="#976746" /><rect id="rect57" width="64" height="64" x="0" y="448" fill="#66412c" /><rect id="rect58" width="64" height="64" x="64" y="448" fill="#805539" /><rect id="rect59" width="64" height="64" x="128" y="448" fill="#998f8b" /><rect id="rect60" width="64" height="64" x="192" y="448" fill="#805539" /><rect id="rect61" width="64" height="64" x="256" y="448" fill="#805539" /><rect id="rect62" width="64" height="64" x="320" y="448" fill="#976746" /><rect id="rect63" width="64" height="64" x="384" y="448" fill="#66412c" /><rect id="rect64" width="64" height="64" x="448" y="448" fill="#ad7a54" /><rect id="rect65" width="64" height="4.4" x="384" y="64" fill="#503120" /><rect id="rect66" width="64" height="4.4" x="320" y="128" fill="#503120" /><rect id="rect67" width="64" height="4.4" x="128" y="128" fill="#503120" /><rect id="rect68" width="64" height="4.4" x="192" y="128" fill="#503120" /><rect id="rect69" width="64" height="4.4" x="64" y="64" fill="#503120" /><rect id="rect70" width="64" height="4.4" x="0" y="128" fill="#503120" /><rect id="rect71" width="64" height="4.4" x="64" y="192" fill="#65402a" /><rect id="rect72" width="64" height="4.4" x="256" y="192" fill="#503120" /><rect id="rect73" width="64" height="4.4" x="448" y="192" fill="#503120" /><rect id="rect74" width="64" height="4.4" x="384" y="256" fill="#503120" /><rect id="rect75" width="64" height="4.4" x="192" y="320" fill="#503120" /><rect id="rect76" width="64" height="4.4" x="128" y="256" fill="#503120" /><rect id="rect77" width="64" height="4.4" x="0" y="256" fill="#65402a" /><rect id="rect78" width="64" height="4.4" x="256" y="384" fill="#764d34" /><rect id="rect79" width="64" height="4.4" x="0" y="448" fill="#503120" /><rect id="rect80" width="64" height="4.4" x="320" y="448" fill="#764d34" /><rect id="rect81" width="64" height="4.4" x="320" y="320" fill="#65402a" /><rect id="rect82" width="64" height="4.4" x="384" y="384" fill="#65402a" /></svg>'
+readonly MCPARCH_VERSION="1.0.0"
+readonly REPO_URL="https://raw.githubusercontent.com/Derszi65g/MCPARCH/main/mcparch"
+readonly MCPARCH_ICON_SVG='<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg version="1.1" width="512" height="512" viewBox="0 0 512 512" id="svg1" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg"><defs id="defs1" /><path id="bg1" fill="#81563a" d="M 0,0 H 512 V 512 H 0 Z" /><path id="bg2" fill="#61b441" d="M 0,0 V 128 H 64 V 64 H 128 V 128 H 256 V 192 H 320 V 128 H 384 V 64 H 448 V 192 H 512 V 0 Z" /><rect id="rect1" width="64" height="64" x="0" y="0" fill="#86d562" /><rect id="rect2" width="64" height="64" x="64" y="0" fill="#52a535" /><rect id="rect3" width="64" height="64" x="128" y="0" fill="#6cc349" /><rect id="rect4" width="64" height="64" x="192" y="0" fill="#86d562" /><rect id="rect5" width="64" height="64" x="256" y="0" fill="#6cc349" /><rect id="rect6" width="64" height="64" x="320" y="0" fill="#52a535" /><rect id="rect7" width="64" height="64" x="384" y="0" fill="#6cc349" /><rect id="rect8" width="64" height="64" x="448" y="0" fill="#52a535" /><rect id="rect9" width="64" height="64" x="0" y="64" fill="#52a535" /><rect id="rect10" width="64" height="64" x="64" y="64" fill="#66412c" /><rect id="rect11" width="64" height="64" x="128" y="64" fill="#52a535" /><rect id="rect12" width="64" height="64" x="192" y="64" fill="#3c8527" /><rect id="rect13" width="64" height="64" x="256" y="64" fill="#52a535" /><rect id="rect14" width="64" height="64" x="320" y="64" fill="#6cc349" /><rect id="rect15" width="64" height="64" x="384" y="64" fill="#66412c" /><rect id="rect16" width="64" height="64" x="448" y="64" fill="#6cc349" /><rect id="rect17" width="64" height="64" x="0" y="128" fill="#66412c" /><rect id="rect18" width="64" height="64" x="64" y="128" fill="#998f8b" /><rect id="rect19" width="64" height="64" x="128" y="128" fill="#66412c" /><rect id="rect20" width="64" height="64" x="192" y="128" fill="#66412c" /><rect id="rect21" width="64" height="64" x="256" y="128" fill="#6cc349" /><rect id="rect22" width="64" ... [truncated]
 readonly SCRIPT_CWD=$(pwd)
 readonly LOG_DIR="$SCRIPT_CWD/logs"
 readonly ROOT_SOURCE="$HOME/src"
@@ -121,7 +123,7 @@ function compile_static_zlib() {
     if [ -d "$zlib_src_dir" ]; then
         rm -rf "$zlib_src_dir"
     fi
-    
+
     print_info "Extrayendo zlib..."
     tar -xzf "$zlib_tar"
     cd "$zlib_src_dir"
@@ -137,7 +139,7 @@ function compile_static_zlib() {
 
 function patch_cmake_version() {
     print_info "Actualizando la versión mínima de CMake en los archivos CMakeLists.txt..."
-    find . -type f -name "CMakeLists.txt" -not -path "./sdl3/*" -not -path "./imgui/*" -exec sed -i 's/cmake_minimum_required *(VERSION *[0-9.]*)/cmake_minimum_required(VERSION 3.5)/g' {} + 
+    find . -type f -name "CMakeLists.txt" -not -path "./sdl3/*" -not -path "./imgui/*" -exec sed -i 's/cmake_minimum_required *(VERSION *[0-9.]*)/cmake_minimum_required(VERSION 3.5)/g' {} +
     print_success "Versión de CMake actualizada."
 }
 
@@ -287,7 +289,7 @@ function do_list_versions() {
         print_info "Usa la opción '--add' para añadir una."
         return 1
     fi
-    
+
     # Imprimir una lista numerada
     local i=1
     for version_file in "$VERSIONS_DB_DIR"/*; do
@@ -338,7 +340,7 @@ function do_remove_version() {
     print_warning "Esto borrará los datos del juego en '$game_path'."
     read -p "¿Estás seguro de que deseas continuar? (s/n): " choice
     case "$choice" in
-        [Ss]*) 
+        [Ss]*)
             print_info "Eliminando versión '$version_id'வுகளை..."
 
             # Eliminar el directorio del juego
@@ -361,10 +363,10 @@ function do_remove_version() {
             fi
 
             print_success "Versión '$version_id' eliminada correctamente."
-            ;; 
+            ;;
         *)
             print_info "Operación cancelada."
-            ;; 
+            ;;
     esac
 }
 
@@ -407,11 +409,11 @@ function ask_and_cleanup_dir() {
     if [ ! -d "$dir_path" ]; then
         return
     fi
-    echo 
+    echo
     print_warning "ADVERTENCIA: Estás a punto de eliminar permanentemente los $dir_description."
     read -p "¿Deseas eliminar el directorio '$dir_path'? (s/n): " choice
     case "$choice" in
-        [Ss]*) 
+        [Ss]*)
             print_info "Eliminando '$dir_path'..."
             if rm -rf "$dir_path"; then
                 print_success "Directorio de $dir_description eliminado."
@@ -460,16 +462,17 @@ function show_interactive_menu() {
         echo "  3. Eliminar una versión"
         echo "  4. Listar versiones instaladas"
         echo "  5. Compilar / Actualizar componentes"
-        echo "  6. Limpiar archivos de compilación"
-        echo "  7. Desinstalar todo"
-        echo "  8. Salir"
+        echo "  6. Buscar actualizaciones de MCPARCH"
+        echo "  7. Limpiar archivos de compilación"
+        echo "  8. Desinstalar todo"
+        echo "  9. Salir"
         echo "-------------------------"
         read -p "Elige una opción: " choice
 
         case "$choice" in
             1) do_launch ;;
             2) do_add_version ;;
-            3) 
+            3)
                 do_list_versions
                 if [ $? -eq 0 ]; then
                     read -p "Ingresa el ID de la versión a eliminar: " version_id_to_remove
@@ -482,9 +485,10 @@ function show_interactive_menu() {
                 ;;
             4) do_list_versions ;;
             5) do_build ;;
-            6) do_cleanup_sources ;;
-            7) do_uninstall ;;
-            8) print_info "Saliendo..."; exit 0 ;;
+            6) do_update ;;
+            7) do_cleanup_sources ;;
+            8) do_uninstall ;;
+            9) print_info "Saliendo..."; exit 0 ;;
             *) print_error "Opción no válida. Intenta de nuevo." ;;
         esac
         echo
@@ -495,10 +499,11 @@ function show_interactive_menu() {
 function show_usage() {
     echo "Uso: $0 [opción] [argumento]"
     echo
-    echo "Opciones de Instalación y Desinstalación:"
+    echo "Opciones de Instalación y Mantenimiento:"
     echo "  --install          Instala el script y el autocompletado a nivel de sistema."
     echo "  --uninstall-system Desinstala SOLO el script y el autocompletado del sistema."
     echo "  -u, --uninstall    Realiza una desinstalación COMPLETA (sistema, componentes y datos de usuario)."
+    echo "  --update           Busca y aplica actualizaciones para este script."
     echo
     echo "Opciones Generales:"
     echo "  -b, --build        Clona, compila e instala los componentes de mcpelauncher."
@@ -602,7 +607,7 @@ function do_uninstall_system() {
         sudo -- "$0" "--internal-uninstall-system"
         return $?
     fi
-    
+
     print_info "Desinstalando mcparch del sistema..."
 
     # Archivos a eliminar
@@ -626,14 +631,14 @@ function do_uninstall_system() {
         rm -v "$fish_completion_file"
         print_success "Autocompletado de Fish eliminado."
     fi
-    
+
     print_success "Desinstalación del sistema completada."
 }
 
 
 function do_uninstall() {
     print_info "Iniciando el proceso de desinstalación COMPLETO..."
-    
+
     # Paso 1: Desinstalar los archivos del sistema
     do_uninstall_system
 
@@ -691,7 +696,7 @@ function do_launch() {
     if [ "$num_versions" -eq 1 ] && [ ! -e "${version_files[0]}" ]; then
         num_versions=0
     fi
-    
+
     if [ "$num_versions" -eq 0 ]; then
         print_error "No hay ninguna versión de Minecraft instalada."
         print_info "Usa la opción '--add' para añadir tu primera versión."
@@ -750,7 +755,7 @@ function install_icon_if_needed() {
     print_info "Instalando el icono de la aplicación por primera vez..."
     mkdir -p "$icon_dir"
     echo "$MCPARCH_ICON_SVG" > "$icon_file"
-    
+
     # Actualizar la caché de iconos (opcional, pero buena práctica)
     if command -v gtk-update-icon-cache &> /dev/null; then
         gtk-update-icon-cache -f -t "$HOME/.local/share/icons/hicolor" || true
@@ -773,7 +778,7 @@ function do_create_shortcut() {
     local desktop_dir="$HOME/.local/share/applications"
     mkdir -p "$desktop_dir"
     local shortcut_file="$desktop_dir/mcparch-$version_id.desktop"
-    
+
     # Usar el comando instalado si existe, si no, la ruta del script
     local exec_command="mcparch"
     if ! command -v mcparch &> /dev/null; then
@@ -804,15 +809,15 @@ EOF
 
 function do_install_completion() {
     print_info "Instalando autocompletado para el shell..."
-    
+
     local shell_name
     shell_name=$(basename "$SHELL")
-    
+
     local script_dir
     script_dir=$(dirname "$(realpath "$0")")
 
     case "$shell_name" in
-        bash) 
+        bash)
             local config_file="$HOME/.bashrc"
             local source_line="source \"$script_dir/mcparch-completion.bash\""
             if grep -qF "$source_line" "$config_file"; then
@@ -823,8 +828,8 @@ function do_install_completion() {
                 print_success "¡Instalación completada!"
                 print_info "Por favor, reinicia tu terminal o ejecuta 'source $config_file' para activarlo."
             fi
-            ;; 
-        zsh) 
+            ;;
+        zsh)
             local config_file="$HOME/.zshrc"
             local source_line="source \"$script_dir/mcparch-completion.bash\""
             local bashcomp_line="autoload -U +X bashcompinit && bashcompinit"
@@ -854,27 +859,27 @@ function do_install_completion() {
             fi
             print_success "¡Instalación completada!"
             print_info "Por favor, reinicia tu terminal o ejecuta 'source $config_file' para activarlo."
-            ;; 
-        fish) 
+            ;;
+        fish)
             local completions_dir="$HOME/.config/fish/completions"
             local target_file="$completions_dir/mcparch.fish"
-            
+
             if [ -f "$target_file" ]; then
                 print_success "El autocompletado para Fish ya está instalado."
                 return
             fi
-            
+
             print_info "Instalando autocompletado para Fish..."
             mkdir -p "$completions_dir"
             cp "$script_dir/mcparch-completion.fish" "$target_file"
             print_success "¡Instalación completada!"
             print_info "Por favor, reinicia tu terminal para activar el autocompletado."
-            ;; 
+            ;;
         *)
             print_error "Shell '$shell_name' no soportado para la instalación automática."
             print_info "Puedes instalarlo manualmente añadiendo la siguiente línea a tu archivo de configuración:"
             echo "  source \"$script_dir/mcparch-completion.bash\""
-            ;; 
+            ;;
     esac
 }
 
@@ -892,7 +897,7 @@ function main() {
     # --- NUEVO: Procesamiento de argumentos en dos fases ---
     # Fase 1: Leer todos los argumentos y establecer flags.
     local _action_build=false
-    
+
     if [ $# -eq 0 ]; then
         do_launch
         exit 0
@@ -909,7 +914,7 @@ function main() {
             -a|--add)
                 do_add_version
                 exit 0
-                ;; 
+                ;;
             -l|--list)
                 do_list_versions
                 exit 0
@@ -929,7 +934,7 @@ function main() {
                 fi
                 do_run_specific "$2"
                 exit 0
-                ;; 
+                ;;
             --set-default)
                 if [ -z "${2-}" ]; then
                     print_error "La opción '--set-default' requiere un ID de versión como argumento."
@@ -937,7 +942,7 @@ function main() {
                 fi
                 do_set_default_version "$2"
                 exit 0
-                ;; 
+                ;;
             --create-shortcut)
                 if [ -z "${2-}" ]; then
                     print_error "La opción '--create-shortcut' requiere un ID de versión como argumento."
@@ -945,44 +950,48 @@ function main() {
                 fi
                 do_create_shortcut "$2"
                 exit 0
-                ;; 
+                ;;
             -b|--build)
                 _action_build=true # Solo marcamos la acción
                 shift
-                ;; 
+                ;;
             --cleanup)
                 CLEANUP_AFTER_BUILD=true # Marcamos la opción de limpieza
                 shift
-                ;; 
+                ;;
             -u|--uninstall)
                 do_uninstall
                 exit 0
-                ;; 
+                ;;
             --uninstall-system)
                 do_uninstall_system
                 exit 0
-                ;; 
+                ;;
             -h|--help)
                 show_usage
                 exit 0
-                ;; 
+                ;;
             -i|--interactive)
                 show_interactive_menu
                 exit 0
-                ;; 
+                ;;
             --install)
                 do_install "$@"
                 exit 0
-                ;; 
+                ;;
             --install-completion)
                 do_install_completion
                 exit 0
-                ;; 
+                ;;
+            --update)
+                do_update
+                exit 0
+                ;;
             *)
                 print_error "Opción no reconocida: $1"
                 show_usage
                 exit 1
-                ;; 
+                ;;
         esac
     done
 
