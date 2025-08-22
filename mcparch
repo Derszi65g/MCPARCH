@@ -549,24 +549,31 @@ function do_update() {
     main_branch=$(git symbolic-ref --short HEAD)
 
     # 3. Buscar cambios remotos
+    print_info "Contactando con el repositorio remoto..."
     git fetch origin
 
-    # 4. Comparar el commit local con el remoto
-    local local_commit
-    local remote_commit
-    local_commit=$(git rev-parse HEAD)
-    remote_commit=$(git rev-parse "origin/$main_branch")
+    # 4. Obtener la versión actual (tag o hash)
+    local current_version
+    current_version=$(git describe --tags --abbrev=0 2>/dev/null || git rev-parse --short HEAD)
 
-    if [ "$local_commit" = "$remote_commit" ]; then
-        print_success "¡Ya tienes la última versión de mcparch!"
+    # 5. Obtener la versión más reciente (tag o hash)
+    local latest_version
+    latest_version=$(git describe --tags --abbrev=0 "origin/$main_branch" 2>/dev/null || git rev-parse --short "origin/$main_branch")
+
+    if [ "$current_version" = "$latest_version" ]; then
+        print_success "¡Ya tienes la última versión de mcparch ($current_version)!"
         exit 0
     fi
 
-    # 5. Si hay cambios, mostrarlos
-    print_info "¡Hay una nueva versión disponible! Cambios:"
+    # 6. Si hay cambios, mostrarlos
+    print_info "¡Hay una nueva versión disponible!"
+    print_info "  Versión actual: $current_version"
+    print_info "  Nueva versión:  $latest_version"
+    echo
+    print_info "Cambios:"
     echo "--------------------------------------------------"
     # Usamos un formato legible para el log
-    git log --pretty=format:"- %s (%an, %ar)" "$local_commit..$remote_commit"
+    git log --pretty=format:"- %s (%an, %ar)" "$current_version..$latest_version"
     echo "--------------------------------------------------"
 
     read -p "¿Deseas actualizar ahora? (s/n): " choice
@@ -579,7 +586,7 @@ function do_update() {
                 exit 1
             fi
 
-            print_success "El script ha sido actualizado."
+            print_success "El script ha sido actualizado a la versión $latest_version."
 
             # Preguntar si se quiere reinstalar
             if command -v mcparch &> /dev/null; then
