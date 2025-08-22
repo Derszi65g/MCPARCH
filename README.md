@@ -6,7 +6,7 @@
 
 # Screenshots
 
-## MENU
+## MENU GAME
 
 ![](/assets/MENU.png)
 
