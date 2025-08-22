@@ -17,9 +17,7 @@ set -u
 set -o pipefail
 
 # --- Variables Globales ---
-readonly MCPARCH_VERSION="1.0.0"
-readonly REPO_URL="https://raw.githubusercontent.com/Derszi65g/MCPARCH/main/mcparch"
-readonly MCPARCH_ICON_SVG='<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg version="1.1" width="512" height="512" viewBox="0 0 512 512" id="svg1" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg"><defs id="defs1" /><path id="bg1" fill="#81563a" d="M 0,0 H 512 V 512 H 0 Z" /><path id="bg2" fill="#61b441" d="M 0,0 V 128 H 64 V 64 H 128 V 128 H 256 V 192 H 320 V 128 H 384 V 64 H 448 V 192 H 512 V 0 Z" /><rect id="rect1" width="64" height="64" x="0" y="0" fill="#86d562" /><rect id="rect2" width="64" height="64" x="64" y="0" fill="#52a535" /><rect id="rect3" width="64" height="64" x="128" y="0" fill="#6cc349" /><rect id="rect4" width="64" height="64" x="192" y="0" fill="#86d562" /><rect id="rect5" width="64" height="64" x="256" y="0" fill="#6cc349" /><rect id="rect6" width="64" height="64" x="320" y="0" fill="#52a535" /><rect id="rect7" width="64" height="64" x="384" y="0" fill="#6cc349" /><rect id="rect8" width="64" height="64" x="448" y="0" fill="#52a535" /><rect id="rect9" width="64" height="64" x="0" y="64" fill="#52a535" /><rect id="rect10" width="64" height="64" x="64" y="64" fill="#66412c" /><rect id="rect11" width="64" height="64" x="128" y="64" fill="#52a535" /><rect id="rect12" width="64" height="64" x="192" y="64" fill="#3c8527" /><rect id="rect13" width="64" height="64" x="256" y="64" fill="#52a535" /><rect id="rect14" width="64" height="64" x="320" y="64" fill="#6cc349" /><rect id="rect15" width="64" height="64" x="384" y="64" fill="#66412c" /><rect id="rect16" width="64" height="64" x="448" y="64" fill="#6cc349" /><rect id="rect17" width="64" height="64" x="0" y="128" fill="#66412c" /><rect id="rect18" width="64" height="64" x="64" y="128" fill="#998f8b" /><rect id="rect19" width="64" height="64" x="128" y="128" fill="#66412c" /><rect id="rect20" width="64" height="64" x="192" y="128" fill="#66412c" /><rect id="rect21" width="64" height="64" x="256" y="128" fill="#6cc349" /><rect id="rect22" width="64" ... [truncated]
+readonly MCPARCH_ICON_SVG='<?xml version="1.0" encoding="UTF-8" standalone="no"?><svg version="1.1" width="512" height="512" viewBox="0 0 512 512" id="svg1" xml:space="preserve" xmlns="http://www.w3.org/2000/svg" xmlns:svg="http://www.w3.org/2000/svg"><defs id="defs1" /><path id="bg1" fill="#81563a" d="M 0,0 H 512 V 512 H 0 Z" /><path id="bg2" fill="#61b441" d="M 0,0 V 128 H 64 V 64 H 128 V 128 H 256 V 192 H 320 V 128 H 384 V 64 H 448 V 192 H 512 V 0 Z" /><rect id="rect1" width="64" height="64" x="0" y="0" fill="#86d562" /><rect id="rect2" width="64" height="64" x="64" y="0" fill="#52a535" /><rect id="rect3" width="64" height="64" x="128" y="0" fill="#6cc349" /><rect id="rect4" width="64" height="64" x="192" y="0" fill="#86d562" /><rect id="rect5" width="64" height="64" x="256" y="0" fill="#6cc349" /><rect id="rect6" width="64" height="64" x="320" y="0" fill="#52a535" /><rect id="rect7" width="64" height="64" x="384" y="0" fill="#6cc349" /><rect id="rect8" width="64" height="64" x="448" y="0" fill="#52a535" /><rect id="rect9" width="64" height="64" x="0" y="64" fill="#52a535" /><rect id="rect10" width="64" height="64" x="64" y="64" fill="#66412c" /><rect id="rect11" width="64" height="64" x="128" y="64" fill="#52a535" /><rect id="rect12" width="64" height="64" x="192" y="64" fill="#3c8527" /><rect id="rect13" width="64" height="64" x="256" y="64" fill="#52a535" /><rect id="rect14" width="64" height="64" x="320" y="64" fill="#6cc349" /><rect id="rect15" width="64" height="64" x="384" y="64" fill="#66412c" /><rect id="rect16" width="64" height="64" x="448" y="64" fill="#6cc349" /><rect id="rect17" width="64" height="64" x="0" y="128" fill="#66412c" /><rect id="rect18" width="64" height="64" x="64" y="128" fill="#998f8b" /><rect id="rect19" width="64" height="64" x="128" y="128" fill="#66412c" /><rect id="rect20" width="64" height="64" x="192" y="128" fill="#66412c" /><rect id="rect21" width="64" height="64" x="256" y="128" fill="#6cc349" /><rect id="rect22" width="64" height="64" x="320" y="128" fill="#66412c" /><rect id="rect23" width="64" height="64" x="384" y="128" fill="#805539" /><rect id="rect24" width="64" height="64" x="448" y="128" fill="#52a535" /><rect id="rect25" width="64" height="64" x="0" y="192" fill="#976746" /><rect id="rect26" width="64" height="64" x="64" y="192" fill="#805539" /><rect id="rect27" width="64" height="64" x="128" y="192" fill="#976746" /><rect id="rect28" width="64" height="64" x="192" y="192" fill="#ad7a54" /><rect id="rect29" width="64" height="64" x="256" y="192" fill="#66412c" /><rect id="rect30" width="64" height="64" x="320" y="192" fill="#805539" /><rect id="rect31" width="64" height="64" x="384" y="192" fill="#976746" /><rect id="rect32" width="64" height="64" x="448" y="192" fill="#66412c" /><rect id="rect33" width="64" height="64" x="0" y="256" fill="#805539" /><rect id="rect34" width="64" height="64" x="64" y="256" fill="#66412c" /><rect id="rect35" width="64" height="64" x="128" y="256" fill="#66412c" /><rect id="rect36" width="64" height="64" x="192" y="256" fill="#976746" /><rect id="rect37" width="64" height="64" x="256" y="256" fill="#805539" /><rect id="rect38" width="64" height="64" x="320" y="256" fill="#ad7a54" /><rect id="rect39" width="64" height="64" x="384" y="256" fill="#66412c" /><rect id="rect40" width="64" height="64" x="448" y="256" fill="#66412c" /><rect id="rect41" width="64" height="64" x="0" y="320" fill="#ad7a54" /><rect id="rect42" width="64" height="64" x="64" y="320" fill="#805539" /><rect id="rect43" width="64" height="64" x="128" y="320" fill="#66412c" /><rect id="rect44" width="64" height="64" x="192" y="320" fill="#66412c" /><rect id="rect45" width="64" height="64" x="256" y="320" fill="#998f8b" /><rect id="rect46" width="64" height="64" x="320" y="320" fill="#805539" /><rect id="rect47" width="64" height="64" x="384" y="320" fill="#976746" /><rect id="rect48" width="64" height="64" x="448" y="320" fill="#805539" /><rect id="rect49" width="64" height="64" x="0" y="384" fill="#805539" /><rect id="rect50" width="64" height="64" x="64" y="384" fill="#976746" /><rect id="rect51" width="64" height="64" x="128" y="384" fill="#66412c" /><rect id="rect52" width="64" height="64" x="192" y="384" fill="#ad7a54" /><rect id="rect53" width="64" height="64" x="256" y="384" fill="#976746" /><rect id="rect54" width="64" height="64" x="320" y="384" fill="#ad7a54" /><rect id="rect55" width="64" height="64" x="384" y="384" fill="#805539" /><rect id="rect56" width="64" height="64" x="448" y="384" fill="#976746" /><rect id="rect57" width="64" height="64" x="0" y="448" fill="#66412c" /><rect id="rect58" width="64" height="64" x="64" y="448" fill="#805539" /><rect id="rect59" width="64" height="64" x="128" y="448" fill="#998f8b" /><rect id="rect60" width="64" height="64" x="192" y="448" fill="#805539" /><rect id="rect61" width="64" height="64" x="256" y="448" fill="#805539" /><rect id="rect62" width="64" height="64" x="320" y="448" fill="#976746" /><rect id="rect63" width="64" height="64" x="384" y="448" fill="#66412c" /><rect id="rect64" width="64" height="64" x="448" y="448" fill="#ad7a54" /><rect id="rect65" width="64" height="4.4" x="384" y="64" fill="#503120" /><rect id="rect66" width="64" height="4.4" x="320" y="128" fill="#503120" /><rect id="rect67" width="64" height="4.4" x="128" y="128" fill="#503120" /><rect id="rect68" width="64" height="4.4" x="192" y="128" fill="#503120" /><rect id="rect69" width="64" height="4.4" x="64" y="64" fill="#503120" /><rect id="rect70" width="64" height="4.4" x="0" y="128" fill="#503120" /><rect id="rect71" width="64" height="4.4" x="64" y="192" fill="#65402a" /><rect id="rect72" width="64" height="4.4" x="256" y="192" fill="#503120" /><rect id="rect73" width="64" height="4.4" x="448" y="192" fill="#503120" /><rect id="rect74" width="64" height="4.4" x="384" y="256" fill="#503120" /><rect id="rect75" width="64" height="4.4" x="192" y="320" fill="#503120" /><rect id="rect76" width="64" height="4.4" x="128" y="256" fill="#503120" /><rect id="rect77" width="64" height="4.4" x="0" y="256" fill="#65402a" /><rect id="rect78" width="64" height="4.4" x="256" y="384" fill="#764d34" /><rect id="rect79" width="64" height="4.4" x="0" y="448" fill="#503120" /><rect id="rect80" width="64" height="4.4" x="320" y="448" fill="#764d34" /><rect id="rect81" width="64" height="4.4" x="320" y="320" fill="#65402a" /><rect id="rect82" width="64" height="4.4" x="384" y="384" fill="#65402a" /></svg>'
 readonly SCRIPT_CWD=$(pwd)
 readonly LOG_DIR="$SCRIPT_CWD/logs"
 readonly ROOT_SOURCE="$HOME/src"
@@ -462,10 +460,9 @@ function show_interactive_menu() {
         echo "  3. Eliminar una versión"
         echo "  4. Listar versiones instaladas"
         echo "  5. Compilar / Actualizar componentes"
-        echo "  6. Buscar actualizaciones de MCPARCH"
-        echo "  7. Limpiar archivos de compilación"
-        echo "  8. Desinstalar todo"
-        echo "  9. Salir"
+        echo "  6. Limpiar archivos de compilación"
+        echo "  7. Desinstalar todo"
+        echo "  8. Salir"
         echo "-------------------------"
         read -p "Elige una opción: " choice
 
@@ -485,10 +482,9 @@ function show_interactive_menu() {
                 ;;
             4) do_list_versions ;;
             5) do_build ;;
-            6) do_update ;;
-            7) do_cleanup_sources ;;
-            8) do_uninstall ;;
-            9) print_info "Saliendo..."; exit 0 ;;
+            6) do_cleanup_sources ;;
+            7) do_uninstall ;;
+            8) print_info "Saliendo..."; exit 0 ;;
             *) print_error "Opción no válida. Intenta de nuevo." ;;
         esac
         echo
@@ -499,17 +495,17 @@ function show_interactive_menu() {
 function show_usage() {
     echo "Uso: $0 [opción] [argumento]"
     echo
-    echo "Opciones de Instalación y Mantenimiento:"
+    echo "Opciones de Instalación y Desinstalación:"
     echo "  --install          Instala el script y el autocompletado a nivel de sistema."
     echo "  --uninstall-system Desinstala SOLO el script y el autocompletado del sistema."
     echo "  -u, --uninstall    Realiza una desinstalación COMPLETA (sistema, componentes y datos de usuario)."
-    echo "  --update           Busca y aplica actualizaciones para este script."
     echo
     echo "Opciones Generales:"
     echo "  -b, --build        Clona, compila e instala los componentes de mcpelauncher."
     echo "      --cleanup      Limpia los directorios con el código fuente después de una compilación exitosa."
     echo "  -i, --interactive  Abre el menú interactivo del lanzador."
-    echo "  --install-completion Instala el script de autocompletado para tu shell (Bash, Zsh, Fish)."
+    echo "      --install-completion Instala el script de autocompletado para tu shell (Bash, Zsh, Fish)."
+    echo "      --update       Busca y aplica actualizaciones para este script."
     echo "  -h, --help         Muestra este mensaje de ayuda."
     echo
     echo "Gestión de Versiones:"
@@ -537,6 +533,78 @@ function do_build() {
     if [ "$CLEANUP_AFTER_BUILD" = true ]; then
         do_cleanup_sources
     fi
+}
+
+function do_update() {
+    print_info "Buscando actualizaciones..."
+
+    # 1. Asegurarse de que estamos en un repositorio de Git
+    if ! git rev-parse --is-inside-work-tree &> /dev/null; then
+        print_error "Esta función solo se puede ejecutar desde el directorio del proyecto clonado con Git."
+        exit 1
+    fi
+
+    # 2. Obtener el nombre de la rama principal
+    local main_branch
+    main_branch=$(git symbolic-ref --short HEAD)
+
+    # 3. Buscar cambios remotos
+    git fetch origin
+
+    # 4. Comparar el commit local con el remoto
+    local local_commit
+    local remote_commit
+    local_commit=$(git rev-parse HEAD)
+    remote_commit=$(git rev-parse "origin/$main_branch")
+
+    if [ "$local_commit" = "$remote_commit" ]; then
+        print_success "¡Ya tienes la última versión de mcparch!"
+        exit 0
+    fi
+
+    # 5. Si hay cambios, mostrarlos
+    print_info "¡Hay una nueva versión disponible! Cambios:"
+    echo "--------------------------------------------------"
+    # Usamos un formato legible para el log
+    git log --pretty=format:"- %s (%an, %ar)" "$local_commit..$remote_commit"
+    echo "--------------------------------------------------"
+
+    read -p "¿Deseas actualizar ahora? (s/n): " choice
+    case "$choice" in
+        [Ss]*)
+            print_info "Actualizando el script..."
+            # Hacer pull para traer los cambios
+            if ! git pull origin "$main_branch"; then
+                print_error "La actualización falló. Por favor, revisa los errores de Git."
+                exit 1
+            fi
+
+            print_success "El script ha sido actualizado."
+
+            # Preguntar si se quiere reinstalar
+            if command -v mcparch &> /dev/null; then
+                read -p "¿Deseas reinstalar la nueva versión en el sistema? (s/n): " reinstall_choice
+                case "$reinstall_choice" in
+                    [Ss]*)
+                        # Llamar a la función de instalación con sudo
+                        if [ "$(id -u)" -ne 0 ]; then
+                            print_info "Se necesitan privilegios de root para reinstalar."
+                            sudo -- "$0" --install
+                        else
+                            do_install
+                        fi
+                        print_success "¡mcparch ha sido reinstalado en el sistema!"
+                        ;;
+                    *)
+                        print_info "No se reinstalará en el sistema. Puedes hacerlo manualmente con '--install'."
+                        ;;
+                esac
+            fi
+            ;;
+        *)
+            print_info "Actualización cancelada."
+            ;;
+    esac
 }
 
 function do_cleanup_sources() {
@@ -823,7 +891,7 @@ function do_install_completion() {
             if grep -qF "$source_line" "$config_file"; then
                 print_success "El autocompletado para Bash ya está instalado."
             else
-                print_info "Añadiendo autocompletado a '$config_file'ப்பான"
+                print_info "Añadiendo autocompletado a '$config_file'..."
                 echo -e "\n# Autocompletado para MCPARCH\n$source_line" >> "$config_file"
                 print_success "¡Instalación completada!"
                 print_info "Por favor, reinicia tu terminal o ejecuta 'source $config_file' para activarlo."
@@ -849,7 +917,7 @@ function do_install_completion() {
                  return
             fi
 
-            print_info "Añadiendo autocompletado a '$config_file'ப்பான"
+            print_info "Añadiendo autocompletado a '$config_file'..."
             echo -e "\n# Autocompletado para MCPARCH" >> "$config_file"
             if $needs_bashcomp; then
                 echo "$bashcomp_line" >> "$config_file"
@@ -886,6 +954,7 @@ function do_install_completion() {
 
 # --- Flujo Principal del Script ---
 function main() {
+
     # Asegurarse de que los directorios de config existen al inicio
     mkdir -p "$CONFIG_DIR"
     mkdir -p "$VERSIONS_DB_DIR"
