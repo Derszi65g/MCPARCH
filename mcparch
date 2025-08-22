@@ -536,64 +536,78 @@ function do_build() {
 }
 
 function do_update() {
-    print_info "Buscando actualizaciones..."
+    print_info "Buscando actualizaciones para mcparch..."
 
-    # 1. Asegurarse de que estamos en un repositorio de Git
+    # MEJORA: Asegurarse de que estamos en un repositorio de Git
     if ! git rev-parse --is-inside-work-tree &> /dev/null; then
         print_error "Esta función solo se puede ejecutar desde el directorio del proyecto clonado con Git."
         exit 1
     fi
 
-    # 2. Obtener el nombre de la rama principal
+    # NUEVO: Comprobar si hay cambios locales sin guardar
+    if ! git diff-index --quiet HEAD --; then
+        print_error "Tienes cambios locales sin guardar (uncommitted changes)."
+        print_warning "Por favor, guarda tus cambios (con 'git commit' o 'git stash') antes de actualizar."
+        exit 1
+    fi
+
+    # MEJORA: Obtener el nombre de la rama principal de forma más segura
     local main_branch
-    main_branch=$(git symbolic-ref --short HEAD)
+    if ! main_branch=$(git symbolic-ref --short HEAD 2>/dev/null); then
+        print_error "No se pudo determinar la rama actual. Estás en un estado 'detached HEAD'."
+        print_warning "Por favor, muévete a una rama (ej: 'git checkout main') para actualizar."
+        exit 1
+    fi
 
-    # 3. Buscar cambios remotos
     print_info "Contactando con el repositorio remoto..."
-    git fetch origin
+    if ! git fetch origin; then
+        print_error "No se pudo contactar con el repositorio remoto. Verifica tu conexión a internet."
+        exit 1
+    fi
 
-    # 4. Obtener la versión actual (tag o hash)
-    local current_version
-    current_version=$(git describe --tags --abbrev=0 2>/dev/null || git rev-parse --short HEAD)
+    # MEJORA: Usar git describe para obtener versiones legibles
+    local local_version
+    local_version=$(git describe --tags --always --dirty=-modified)
+    local remote_version
+    remote_version=$(git describe --tags --always "origin/$main_branch" --dirty=-modified)
 
-    # 5. Obtener la versión más reciente (tag o hash)
-    local latest_version
-    latest_version=$(git describe --tags --abbrev=0 "origin/$main_branch" 2>/dev/null || git rev-parse --short "origin/$main_branch")
+    # MEJORA: Comparar los commits reales para más fiabilidad
+    local local_commit
+    local_commit=$(git rev-parse HEAD)
+    local remote_commit
+    remote_commit=$(git rev-parse "origin/$main_branch")
 
-    if [ "$current_version" = "$latest_version" ]; then
-        print_success "¡Ya tienes la última versión de mcparch ($current_version)!"
+    if [ "$local_commit" = "$remote_commit" ]; then
+        print_success "¡Ya estás en la última versión: $local_version!"
         exit 0
     fi
 
-    # 6. Si hay cambios, mostrarlos
     print_info "¡Hay una nueva versión disponible!"
-    print_info "  Versión actual: $current_version"
-    print_info "  Nueva versión:  $latest_version"
+    print_info "  Versión actual: $local_version"
+    print_info "  Nueva versión:  $remote_version"
     echo
     print_info "Cambios:"
     echo "--------------------------------------------------"
-    # Usamos un formato legible para el log, comparando HEAD con la rama remota
-    git log --pretty=format:"- %s (%an, %ar)" "HEAD..origin/$main_branch"
+    git log --pretty=format:"- %s (%an, %ar)" "$local_commit..$remote_commit"
     echo "--------------------------------------------------"
 
     read -p "¿Deseas actualizar ahora? (s/n): " choice
     case "$choice" in
         [Ss]*)
             print_info "Actualizando el script..."
-            # Usamos --rebase para evitar un "merge commit" y el editor de texto
             if ! git pull --rebase origin "$main_branch"; then
                 print_error "La actualización falló. Por favor, revisa los errores de Git."
                 exit 1
             fi
 
-            print_success "El script ha sido actualizado a la versión $latest_version."
+            local new_version
+            new_version=$(git describe --tags --always)
+            print_success "El script ha sido actualizado a la versión $new_version."
 
-            # Preguntar si se quiere reinstalar
             if command -v mcparch &> /dev/null; then
                 read -p "¿Deseas reinstalar la nueva versión en el sistema? (s/n): " reinstall_choice
                 case "$reinstall_choice" in
                     [Ss]*)
-                        # Llamar a la función de instalación con sudo
                         if [ "$(id -u)" -ne 0 ]; then
                             print_info "Se necesitan privilegios de root para reinstalar."
                             sudo -- "$0" --install
