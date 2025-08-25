@@ -64,20 +64,119 @@ function print_error() {
 }
 
 function run_as_root() {
-    if [ "$(id -u)" -ne 0 ]; then
-        if command -v sudo &> /dev/null; then
+    # Si ya somos root, simplemente ejecuta el comando.
+    if [ "$(id -u)" -eq 0 ]; then
+        "$@"
+        return
+    fi
+
+    # Usar sudo para obtener privilegios, ya que preserva el directorio de trabajo.
+    if command -v sudo &> /dev/null; then
+        # Verificar si ya tenemos privilegios de sudo cacheados.
+        if sudo -n true 2>/dev/null; then
             sudo "$@"
         else
-            print_error "Se necesitan privilegios de root. Por favor, ejecuta 'sudo $*'"
-            exit 1
+            # Si no, pedimos la contraseña explícitamente en la terminal.
+            print_info "Se requieren privilegios de administrador para continuar."
+            sudo -v # Pide la contraseña y la cachea.
+            if [ $? -ne 0 ]; then
+                print_error "No se pudieron obtener los privilegios de root. Abortando."
+                exit 1
+            fi
+            sudo "$@"
+        fi
+        return
+    fi
+
+    # Si no se encuentra sudo.
+    print_error "No se encontró 'sudo'. Se necesitan privilegios de administrador."
+    exit 1
+}
+
+# --- NUEVO: Función HÍBRIDA para verificar el PATH y advertir al usuario ---
+function check_path_and_warn() {
+    local install_dir="/usr/local/bin"
+
+    # 1. Comprobación del PATH en vivo
+    if [[ ":$PATH:" == *":$install_dir:"* ]]; then
+        return # El PATH está activo en esta sesión, no se necesita advertencia.
+    fi
+
+    # 2. Comprobación del archivo de configuración si el PATH no está en vivo
+    local shell_config_file=""
+    local path_line_pattern=""
+    local shell_name
+    shell_name=$(basename "$SHELL")
+
+    case "$shell_name" in
+        bash)
+            shell_config_file="$HOME/.bashrc"
+            path_line_pattern="export PATH=.*$install_dir"
+            ;;
+        zsh)
+            shell_config_file="$HOME/.zshrc"
+            path_line_pattern="export PATH=.*$install_dir"
+            ;;
+        fish)
+            shell_config_file="$HOME/.config/fish/config.fish"
+            path_line_pattern="fish_add_path $install_dir"
+            ;;
+        *)
+            # Para shells desconocidos, no podemos comprobar el archivo de config.
+            # Saltamos directamente a la advertencia genérica.
+            shell_config_file=""
+            ;;
+    esac
+
+    # Si tenemos un archivo de config, lo revisamos
+    if [ -n "$shell_config_file" ] && [ -f "$shell_config_file" ]; then
+        if grep -q -E "$path_line_pattern" "$shell_config_file"; then
+            # La configuración existe, pero no está activa. El usuario solo necesita reiniciar el shell.
+            echo
+            print_warning "El directorio de instalación '$install_dir' está en tu '$shell_config_file' pero no en el PATH de esta sesión."
+            print_info "Esto puede pasar si acabas de instalar. Simplemente reinicia tu terminal para aplicar los cambios."
+            echo
+            return
         fi
     fi
+
+    # 3. Si ambas comprobaciones fallan, mostrar la advertencia completa.
+    echo
+    print_warning "El directorio de instalación '$install_dir' no se encuentra en tu variable de entorno PATH."
+    print_info "Esto es común en algunas distribuciones como Void Linux."
+    print_info "Para que el lanzador funcione, debes añadir esta ruta a tu shell."
+    echo
+
+    print_info "Soluciones recomendadas:"
+    echo "1. (Automático) Ejecuta este script con la opción '--setup-path' para que lo configure por ti:"
+    echo -e "   \e[32m$0 --setup-path\e[0m"
+    echo "2. (Manual) Ejecuta el siguiente comando para añadir la línea a tu configuración:"
+
+    if [ -n "$shell_config_file" ]; then
+        local manual_command=""
+        if [ "$shell_name" = "fish" ]; then
+            manual_command="echo 'fish_add_path $install_dir' >> \"$shell_config_file\""
+        else
+            manual_command="echo 'export PATH=\"$PATH:$install_dir\"' >> \"$shell_config_file\""
+        fi
+        echo -e "   \e[33m$manual_command\e[0m"
+        echo "   Luego, reinicia tu terminal o ejecuta 'source \"$shell_config_file\"' para aplicar los cambios."
+    else
+        echo "   Abre manualmente el archivo de configuración de tu shell (ej: ~/.profile, ~/.bash_profile)."
+        echo "   Añade la siguiente línea al final del archivo:"
+        echo -e "   \e[32mexport PATH=\"$PATH:$install_dir\"\e[0m"
+        echo "   Luego, reinicia tu terminal para aplicar los cambios."
+    fi
+    echo
 }
+
 
 
 function check_dependencies() {
     print_info "Verificando dependencias de compilación..."
-    local required_cmds=("git" "cmake" "make" "clang" "curl")
+    # pkg-config es crucial para encontrar librerías
+    local required_cmds=("git" "cmake" "make" "clang" "curl" "pkg-config")
+    local required_libs=("libzip" "openssl" "Qt5WebChannel" "Qt5Positioning" "xi") # Librerías a verificar con pkg-config
     local missing_deps=()
 
     for cmd in "${required_cmds[@]}"; do
@@ -85,6 +184,17 @@ function check_dependencies() {
             missing_deps+=("$cmd")
         fi
     done
+
+    # Solo verificar librerías si pkg-config está instalado
+    if command -v "pkg-config" &> /dev/null; then
+        for lib in "${required_libs[@]}"; do
+            if ! pkg-config --exists "$lib"; then
+                # El nombre del paquete de desarrollo suele ser diferente
+                # Se informa al usuario del paquete conceptual que falta
+                missing_deps+=("$lib-devel")
+            fi
+        done
+    fi
 
     if [ ${#missing_deps[@]} -eq 0 ]; then
         print_success "Todas las dependencias de compilación están presentes."
@@ -99,7 +209,7 @@ function check_dependencies() {
 
 function do_install_deps() {
     print_info "Intentando instalar dependencias de compilación automáticamente..."
-    
+
     local PKG_MANAGER=""
     if command -v pacman &> /dev/null; then PKG_MANAGER="pacman";
     elif command -v apt-get &> /dev/null; then PKG_MANAGER="apt";
@@ -108,27 +218,34 @@ function do_install_deps() {
     elif command -v zypper &> /dev/null; then PKG_MANAGER="zypper";
     else
         print_error "No se pudo detectar un gestor de paquetes compatible (apt, pacman, dnf, xbps, zypper)."
-        print_error "Por favor, instala manualmente: git, cmake, make, clang, curl."
+        print_error "Por favor, instala manualmente: git, cmake, make, clang, curl, pkg-config, libzip-devel."
         exit 1
     fi
-    
+
     print_info "Gestor de paquetes detectado: $PKG_MANAGER"
-    
+
     local packages=""
     case "$PKG_MANAGER" in
         pacman)
             print_info "En sistemas Arch, se recomienda tener 'base-devel' instalado."
-            packages="base-devel git cmake make clang curl"
+            packages="base-devel git cmake make clang curl pkg-config libzip qt5-base qt5-webengine qt5-location qt5-declarative qt5-quickcontrols2"
             ;;
         apt)
-            packages="build-essential git cmake make clang curl"
+            packages="build-essential git cmake make clang curl pkg-config libzip-dev"
             ;;
         dnf)
             print_info "En sistemas Fedora, se recomienda el grupo 'Development Tools'."
-            packages="git cmake make clang curl"
+            packages="git cmake make clang curl pkg-config libzip-devel"
+            ;;
+        xbps)
+            packages="git cmake make clang curl pkg-config libzip-devel openssl-devel libX11-devel wayland-devel alsa-lib-devel libXext-devel libXi-devel libpng-devel MesaLib-devel libevdev-devel qt5-devel qt5-webengine-devel qt5-webchannel-devel qt5-location-devel qt5-declarative-devel qt5-quickcontrols2-devel libatomic-devel"
+            ;;
+        zypper)
+            packages="git cmake make clang curl pkg-config libzip-devel"
             ;;
         *)
-            packages="git cmake make clang curl"
+            # Fallback genérico
+            packages="git cmake make clang curl pkg-config"
             ;;
     esac
 
@@ -193,6 +310,7 @@ function compile_static_zlib() {
     cd "$zlib_src_dir"
 
     print_info "Configurando y compilando zlib (estático)..."
+    export CC=clang # Forzar el uso de clang
     ./configure --prefix="$ZLIB_BUILD_DIR" --static &> "$LOG_DIR/zlib_configure.log"
     make &> "$LOG_DIR/zlib_build.log"
     make install &> "$LOG_DIR/zlib_install.log"
@@ -319,6 +437,7 @@ function get_apk_path() {
 function do_add_version() {
     print_info "Añadiendo una nueva versión de Minecraft..."
     if ! command -v mcpelauncher-extract &> /dev/null; then
+        check_path_and_warn # <--- LLAMADA A LA NUEVA FUNCIÓN
         print_error "Comando 'mcpelauncher-extract' no encontrado."
         print_error "Por favor, ejecuta el script con la opción '-b' para compilar los componentes primero."
         exit 1
@@ -419,7 +538,7 @@ function do_remove_version() {
     read -p "¿Estás seguro de que deseas continuar? (s/n): " choice
     case "$choice" in
         [Ss]*)
-            print_info "Eliminando versión '$version_id'வுகளை..."
+            print_info "Eliminando versión '$version_id'..."
 
             # Eliminar el directorio del juego
             if [ -d "$game_path" ]; then
@@ -457,7 +576,7 @@ function run_game() {
         print_error "La ruta del juego no es válida."
         exit 1
     fi
-    print_info "Iniciando Minecraft desde '$game_path' நான"
+    print_info "Iniciando Minecraft desde '$game_path'..."
     mcpelauncher-client -dg "$game_path" || true
     print_success "El juego se ha cerrado."
 }
@@ -637,6 +756,7 @@ function show_usage() {
     echo "  -i, --interactive  Abre el menú interactivo del lanzador."
     echo "      --install-deps Intenta instalar las dependencias de compilación automáticamente."
     echo "      --install-completion Instala el script de autocompletado para tu shell (Bash, Zsh, Fish)."
+    echo "      --setup-path, -sp Añade automáticamente el directorio de instalación al PATH del shell."
     echo "      --update       Busca y aplica actualizaciones para este script."
     echo "  -h, --help         Muestra este mensaje de ayuda."
     echo
@@ -661,6 +781,8 @@ function do_build() {
     compile_launcher
     print_success "¡Proceso de compilación completado!"
     print_info "Todos los componentes necesarios están instalados."
+
+    check_path_and_warn # <--- LLAMADA A LA NUEVA FUNCIÓN
 
     if [ "$CLEANUP_AFTER_BUILD" = true ]; then
         do_cleanup_sources
@@ -810,7 +932,7 @@ function do_install() {
     local fish_completion_dir="/usr/share/fish/completions"
 
     # 1. Instalar el ejecutable
-    print_info "Instalando '$executable_name' en '$install_dir' நான"
+    print_info "Instalando '$executable_name' en '$install_dir'..."
     cp "$script_path" "$install_dir/$executable_name"
     chmod +x "$install_dir/$executable_name"
     print_success "Script principal instalado."
@@ -908,6 +1030,7 @@ function do_uninstall() {
 function do_launch() {
     print_info "Iniciando en modo lanzador..."
     if ! command -v mcpelauncher-client &> /dev/null; then
+        check_path_and_warn # <--- LLAMADA A LA NUEVA FUNCIÓN
         print_error "Comando 'mcpelauncher-client' no encontrado."
         print_error "Por favor, ejecuta el script con la opción '-b' para compilar los componentes primero."
         exit 1
@@ -917,7 +1040,7 @@ function do_launch() {
     if [ -n "$DEFAULT_VERSION_ID" ]; then
         local version_file="$VERSIONS_DB_DIR/$DEFAULT_VERSION_ID"
         if [ -f "$version_file" ]; then
-            print_info "Iniciando versión por defecto '$DEFAULT_VERSION_ID' நான"
+            print_info "Iniciando versión por defecto '$DEFAULT_VERSION_ID'..."
             local game_path
             game_path=$(cat "$version_file")
             run_game "$game_path"
@@ -971,6 +1094,7 @@ function do_run_specific() {
     fi
 
     if ! command -v mcpelauncher-client &> /dev/null; then
+        check_path_and_warn # <--- LLAMADA A LA NUEVA FUNCIÓN
         print_error "Comando 'mcpelauncher-client' no encontrado."
         print_error "Por favor, ejecuta el script con la opción '-b' para compilar los componentes primero."
         exit 1
@@ -1043,6 +1167,62 @@ EOF
 
     print_success "Acceso directo creado en '$shortcut_file'."
     print_info "Puede que necesites reiniciar tu sesión para que aparezca en el menú de aplicaciones."
+}
+
+function do_setup_path() {
+    print_info "Configurando el PATH del shell..."
+
+    local shell_name
+    shell_name=$(basename "$SHELL")
+    local install_dir="/usr/local/bin"
+
+    case "$shell_name" in
+        bash|zsh) 
+            local config_file=""
+            if [ "$shell_name" = "bash" ]; then
+                config_file="$HOME/.bashrc"
+            else
+                config_file="$HOME/.zshrc"
+            fi
+
+            local export_line="export PATH=\"$PATH:$install_dir\""
+            
+            # Comprobar si la línea o una similar ya existe
+            if [ -f "$config_file" ] && grep -q -E "export PATH=.*$install_dir" "$config_file"; then
+                print_success "El PATH ya está configurado en '$config_file'."
+            else
+                print_info "Añadiendo '$install_dir' al PATH en '$config_file'..."
+                echo -e "\n# Añadido por MCPARCH para mcpelauncher" >> "$config_file"
+                echo "$export_line" >> "$config_file"
+                print_success "¡Configuración completada!"
+                print_info "Por favor, reinicia tu terminal o ejecuta 'source $config_file' para aplicar los cambios."
+            fi
+            ;; 
+        fish)
+            local config_file="$HOME/.config/fish/config.fish"
+            local fish_path_line="fish_add_path $install_dir"
+
+            # Crear el archivo si no existe
+            mkdir -p "$(dirname "$config_file")"
+            touch "$config_file"
+
+            if grep -qF "$fish_path_line" "$config_file"; then
+                print_success "El PATH para Fish ya está configurado."
+            else
+                print_info "Añadiendo '$install_dir' al PATH de Fish..."
+                echo -e "\n# Añadido por MCPARCH para mcpelauncher" >> "$config_file"
+                echo "$fish_path_line" >> "$config_file"
+                print_success "¡Configuración completada!"
+                print_info "Por favor, reinicia tu terminal para aplicar los cambios."
+            fi
+            ;; 
+        *)
+            print_warning "Shell '$shell_name' no soportado para la configuración automática del PATH."
+            print_info "Por favor, añade la siguiente línea a tu archivo de configuración manualmente:"
+            echo "  export PATH=\"
+$PATH:$install_dir\""
+            ;; 
+    esac
 }
 
 function do_install_completion() {
@@ -1136,6 +1316,7 @@ function main() {
     # --- NUEVO: Procesamiento de argumentos en dos fases ---
     # Fase 1: Leer todos los argumentos y establecer flags.
     local _action_build=false
+    local _action_setup_path=false
 
     if [ $# -eq 0 ]; then
         do_launch
@@ -1226,6 +1407,10 @@ function main() {
                 do_install_completion
                 exit 0
                 ;;
+            -sp|--setup-path)
+                _action_setup_path=true
+                shift
+                ;;
             --update)
                 do_update
                 exit 0
@@ -1241,7 +1426,20 @@ function main() {
     # Fase 2: Ejecutar las acciones marcadas.
     if [ "$_action_build" = true ]; then
         do_build
+    fi
+
+    if [ "$_action_setup_path" = true ]; then
+        do_setup_path
+    fi
+
+    if [ "$_action_build" = false ] && [ "$_action_setup_path" = false ] && [ "$CLEANUP_AFTER_BUILD" = true ]; then
+        # Solo ejecutar cleanup si no se hizo build y se pasó --cleanup
+        do_cleanup_sources
+    elif [ "$_action_build" = true ] && [ "$CLEANUP_AFTER_BUILD" = true ]; then
+        # do_build ya se encarga de esto, no hacer nada extra
+        :
     elif [ "$CLEANUP_AFTER_BUILD" = true ]; then
+        # Caso para --setup-path --cleanup
         do_cleanup_sources
     fi
 }

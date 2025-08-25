@@ -8,7 +8,7 @@ _mcparch_completions() {
     prev_word="${COMP_WORDS[COMP_CWORD-1]}"
 
     # Opciones que no esperan un ID de versión
-    local opts_no_arg="-a --add -l --list -b --build --cleanup -u --uninstall --uninstall-system -i --interactive -h --help --install --install-deps --install-completion --update"
+    local opts_no_arg="-a --add -l --list -b --build --cleanup -u --uninstall --uninstall-system -i --interactive -h --help --install --install-deps --install-completion --update --setup-path -sp"
     # Opciones que SÍ esperan un ID de versión
     local opts_with_arg="-r --run --set-default --create-shortcut -d --remove-version"
     local all_opts="$opts_no_arg $opts_with_arg"

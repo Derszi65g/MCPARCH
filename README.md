@@ -158,6 +158,10 @@ Una vez instalado, puedes usar el comando `mcparch` con las siguientes opciones.
     ```bash
     mcparch --help
     ```
+-   **Configurar el PATH (para Void Linux, etc.):**
+    ```bash
+    mcparch --setup-path
+    ```
 
 ### Uso Local (Sin instalación)
 Si prefieres no instalar `mcparch` a nivel de sistema, puedes ejecutar todas las acciones con `./mcparch` desde el directorio clonado.

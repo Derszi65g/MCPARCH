@@ -38,3 +38,4 @@ complete -c mcparch -n "__fish_use_subcommand" -s i -l interactive
 complete -c mcparch -n "__fish_use_subcommand" -s h -l help
 complete -c mcparch -n "__fish_use_subcommand" -s r -l run
 complete -c mcparch -n "__fish_use_subcommand" -s d -l remove-version
+complete -c mcparch -n "__fish_use_subcommand" -s sp -l setup-path
