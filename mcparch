@@ -571,6 +571,14 @@ function uninstall_component() {
 
 # --- Funciones de Flujo Principal (Actualizadas) ---
 
+function setup_environment() {
+    print_info "Configurando el entorno de compilación..."
+    mkdir -p "$LOG_DIR"
+    mkdir -p "$ROOT_SOURCE"
+    cd "$ROOT_SOURCE"
+    print_success "Entorno listo en '$ROOT_SOURCE'."
+}
+
 
 function show_interactive_menu() {
     while true; do
