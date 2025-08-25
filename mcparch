@@ -74,6 +74,84 @@ function run_as_root() {
     fi
 }
 
+
+# --- NUEVO: Funciones de Utilidad de Portabilidad ---
+# Variable global para almacenar el gestor de paquetes detectado
+PKG_MANAGER=""
+
+function detect_package_manager() {
+    if command -v pacman &> /dev/null;
+ then
+        PKG_MANAGER="pacman"
+    elif command -v apt-get &> /dev/null;
+ then
+        PKG_MANAGER="apt"
+    elif command -v dnf &> /dev/null;
+ then
+        PKG_MANAGER="dnf"
+    elif command -v xbps-install &> /dev/null;
+ then
+        PKG_MANAGER="xbps"
+    elif command -v zypper &> /dev/null;
+ then
+        PKG_MANAGER="zypper"
+    else
+        PKG_MANAGER="unknown"
+    fi
+    print_info "Gestor de paquetes detectado: $PKG_MANAGER"
+}
+
+function get_install_command() {
+    local packages="$*"
+    case "$PKG_MANAGER" in
+        pacman) echo "sudo pacman -S --noconfirm --needed $packages" ;;
+        apt) echo "sudo apt-get install -y $packages" ;;
+        dnf) echo "sudo dnf install -y $packages" ;;
+        xbps) echo "sudo xbps-install -S -y $packages" ;;
+        zypper) echo "sudo zypper install -y $packages" ;;
+        *) echo "" ;;
+    esac
+}
+
+function get_package_names() {
+    local deps=($@)
+    local pkg_names=()
+    for dep in "${deps[@]}"; do
+        case "$PKG_MANAGER" in
+            pacman)
+                # En Arch, la mayoría están en base-devel
+                pkg_names+=("git" "cmake" "make" "clang" "curl")
+                # Sugerir el grupo completo es más fácil para el usuario
+                print_info "En sistemas Arch, se recomienda tener 'base-devel' instalado."
+                break # Salimos del bucle porque ya añadimos todo
+                ;;
+            apt)
+                # En Debian/Ubuntu, build-essential agrupa varios
+                if [[ "$dep" == "make" || "$dep" == "clang" ]]; then
+                    # build-essential suele incluir make y un compilador C/C++
+                    [[ " ${pkg_names[*]} " =~ " build-essential " ]] || pkg_names+=("build-essential")
+                    pkg_names+=("clang")
+                else
+                    pkg_names+=("$dep")
+                fi
+                ;;
+            dnf)
+                # En Fedora, los grupos son útiles
+                pkg_names+=("git" "cmake" "make" "clang" "curl")
+                print_info "En sistemas Fedora, se recomienda 'Development Tools'."
+                break
+                ;;
+            *)
+                # Para xbps, zypper y otros, los nombres suelen ser directos
+                pkg_names+=("$dep")
+                ;;
+        esac
+    done
+    # Eliminar duplicados
+    echo "${pkg_names[@]}" | tr ' ' '\n' | sort -u | tr '\n' ' '
+}
+
+
 # --- Funciones de Compilación (Sin cambios) ---
 
 function setup_environment() {
@@ -88,15 +166,69 @@ function setup_environment() {
 }
 
 function check_dependencies() {
-    print_info "Verificando dependencias (git, cmake, make, clang, curl)..."
-    for cmd in git cmake make clang curl; do
+    print_info "Verificando dependencias de compilación..."
+    local required_cmds=("git" "cmake" "make" "clang" "curl")
+    local missing_deps=()
+
+    for cmd in "${required_cmds[@]}"; do
         if ! command -v "$cmd" &> /dev/null; then
-            print_error "Dependencia requerida no encontrada: '$cmd'."
-            print_error "Por favor, instálala e intenta de nuevo."
-            exit 1
+            missing_deps+=("$cmd")
         fi
     done
-    print_success "Todas las dependencias de compilación están presentes."
+
+    if [ ${#missing_deps[@]} -eq 0 ]; then
+        print_success "Todas las dependencias de compilación están presentes."
+        return 0
+    fi
+
+    print_warning "Faltan las siguientes dependencias: ${missing_deps[*]}"
+    
+    # Intentar instalarlas automáticamente
+    detect_package_manager
+
+    if [ "$PKG_MANAGER" = "unknown" ]; then
+        print_error "No se pudo detectar un gestor de paquetes compatible."
+        print_error "Por favor, instala manualmente las dependencias mencionadas e intenta de nuevo."
+        return 1
+    fi
+
+    local packages_to_install
+    packages_to_install=$(get_package_names "${missing_deps[@]}")
+    
+    if [ -z "$packages_to_install" ]; then
+        print_error "No se pudieron determinar los nombres de los paquetes a instalar."
+        return 1
+    fi
+
+    local install_command
+    install_command=$(get_install_command "$packages_to_install")
+
+    echo
+    print_info "Se puede intentar instalar las dependencias automáticamente."
+    print_info "Se ejecutará el siguiente comando:"
+    echo "  $install_command"
+    echo
+    read -p "¿Deseas continuar? (s/n): " choice
+    case "$choice" in
+        [Ss]*)
+            print_info "Instalando dependencias..."
+            # Ejecutar el comando
+            eval "$install_command"
+            if [ $? -ne 0 ]; then
+                print_error "La instalación de dependencias falló."
+                print_error "Por favor, revisa los errores e inténtalo manualmente."
+                return 1
+            fi
+            print_success "Dependencias instaladas correctamente."
+            # Volver a verificar
+            check_dependencies
+            ;;
+        *)
+            print_error "Instalación cancelada por el usuario."
+            print_error "Por favor, instala las dependencias manualmente."
+            return 1
+            ;;
+    esac
 }
 
 function compile_static_zlib() {
