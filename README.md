@@ -145,6 +145,11 @@ Una vez instalado, puedes usar el comando `mcparch` con las siguientes opciones.
     ```bash
     mcparch --build
     ```
+-   **Instalar dependencias de compilación (opcional):**
+    Si faltan `git`, `cmake`, etc., este comando intentará instalarlos usando el gestor de paquetes del sistema.
+    ```bash
+    mcparch --install-deps
+    ```
 -   **Limpiar los archivos de compilación:**
     ```bash
     mcparch --cleanup
