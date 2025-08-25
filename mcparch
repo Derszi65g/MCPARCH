@@ -168,6 +168,13 @@ function compile_extractor() {
     print_info "Instalando mcpelauncher-extract... (ver '$LOG_DIR/extractor_install.log')"
     run_as_root cmake --install build &> "$LOG_DIR/extractor_install.log"
 
+    # NUEVO: Guardar el manifiesto de instalación para una desinstalación robusta
+    local manifest_path="build/install_manifest.txt"
+    if [ -f "$manifest_path" ]; then
+        cp "$manifest_path" "$CONFIG_DIR/extractor_install_manifest.txt"
+        print_info "Manifiesto de instalación para 'extractor' guardado."
+    fi
+
     cd ..
     print_success "mcpelauncher-extract compilado e instalado."
 }
@@ -210,6 +217,13 @@ function compile_launcher() {
 
     print_info "Instalando mcpelauncher-client... (ver '$LOG_DIR/launcher_install.log')"
     run_as_root cmake --install build &> "$LOG_DIR/launcher_install.log"
+
+    # NUEVO: Guardar el manifiesto de instalación para una desinstalación robusta
+    local manifest_path="build/install_manifest.txt"
+    if [ -f "$manifest_path" ]; then
+        cp "$manifest_path" "$CONFIG_DIR/launcher_install_manifest.txt"
+        print_info "Manifiesto de instalación para 'launcher' guardado."
+    fi
 
     cd ..
     print_success "mcpelauncher-client compilado e instalado."
@@ -428,20 +442,63 @@ function ask_and_cleanup_dir() {
 function uninstall_component() {
     local component_name="$1"
     local build_dir="$2"
-    local manifest_file="$build_dir/install_manifest.txt"
+    local executable_name=""
 
-    print_info "Buscando manifiesto para '$component_name' en '$manifest_file' நான"
-    if [ ! -f "$manifest_file" ]; then
-        print_warning "No se encontró el manifiesto. '$component_name' probablemente no fue instalado."
-        return
+    # Asignar el nombre del ejecutable según el componente
+    if [ "$component_name" = "launcher" ]; then
+        executable_name="mcpelauncher-client"
+    elif [ "$component_name" = "extractor" ]; then
+        executable_name="mcpelauncher-extract"
+    else
+        print_error "Nombre de componente desconocido: $component_name"
+        return 1
     fi
 
-    print_info "Manifiesto encontrado. Desinstalando '$component_name'..."
-    if xargs -a "$manifest_file" sudo rm -v; then
-        print_success "Archivos de '$component_name' eliminados."
+    # 1. Ubicación primaria del manifiesto (método nuevo y robusto)
+    local manifest_file="$CONFIG_DIR/${component_name}_install_manifest.txt"
+    # 2. Ubicación de fallback (método antiguo)
+    local fallback_manifest_file="$build_dir/install_manifest.txt"
+
+    print_info "Buscando manifiesto para '$component_name'..."
+
+    if [ ! -f "$manifest_file" ]; then
+        manifest_file="$fallback_manifest_file"
+    fi
+
+    if [ -f "$manifest_file" ]; then
+        print_info "Manifiesto encontrado en '$manifest_file'. Desinstalando '$component_name'..."
+        if xargs -a "$manifest_file" sudo rm -v; then
+            print_success "Archivos de '$component_name' eliminados."
+            rm -f "$CONFIG_DIR/${component_name}_install_manifest.txt"
+        else
+            print_error "Ocurrió un error al eliminar los archivos de '$component_name'."
+        fi
     else
-        print_error "Ocurrió un error al eliminar los archivos de '$component_name'."
-        exit 1
+        # NUEVA LÓGICA: Si no hay manifiesto, comprobar si el comando existe
+        print_warning "No se encontró el manifiesto de desinstalación."
+        if command -v "$executable_name" &> /dev/null; then
+            local executable_path
+            executable_path=$(command -v "$executable_name")
+            print_warning "Sin embargo, el comando '$executable_name' todavía existe en '$executable_path'."
+            print_info "Esto puede ocurrir si los directorios de compilación se eliminaron antes de desinstalar."
+            print_info "No se puede desinstalar automáticamente de forma segura."
+            read -p "¿Deseas eliminar el ejecutable principal '$executable_path' ahora? (s/n): " choice
+            case "$choice" in
+                [Ss]*)
+                    if sudo rm -v "$executable_path"; then
+                        print_success "Ejecutable '$executable_name' eliminado."
+                        print_info "Es posible que otros archivos (librerías, etc.) aún permanezcan. Una recompilación y posterior desinstalación puede limpiarlos."
+                    else
+                        print_error "No se pudo eliminar el ejecutable."
+                    fi
+                    ;;
+                *)
+                    print_info "No se realizaron cambios. Por favor, elimina los archivos manualmente si lo deseas."
+                    ;;
+            esac
+        else
+            print_success "El componente '$component_name' parece no estar instalado."
+        fi
     fi
 }
 
@@ -760,9 +817,9 @@ function do_uninstall() {
         exit 1
     fi
 
-    uninstall_component "mcpelauncher-client" "$LAUNCHER_BUILD_DIR"
+    uninstall_component "launcher" "$LAUNCHER_BUILD_DIR"
     echo
-    uninstall_component "mcpelauncher-extract" "$EXTRACTOR_BUILD_DIR"
+    uninstall_component "extractor" "$EXTRACTOR_BUILD_DIR"
     echo
     cleanup_desktop_integration
     ask_and_cleanup_dir "datos del juego" "$GAME_DATA_DIR"
