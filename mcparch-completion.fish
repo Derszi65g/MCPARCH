@@ -10,6 +10,7 @@ complete -c mcparch -n "__fish_use_subcommand" -l uninstall-system -d "Desinstal
 complete -c mcparch -n "__fish_use_subcommand" -l interactive -d "Abre el menú interactivo"
 complete -c mcparch -n "__fish_use_subcommand" -l help -d "Muestra el mensaje de ayuda"
 complete -c mcparch -n "__fish_use_subcommand" -l install -d "Instala el script a nivel de sistema"
+complete -c mcparch -n "__fish_use_subcommand" -l install-deps -d "Instala las dependencias de compilación"
 complete -c mcparch -n "__fish_use_subcommand" -l install-completion -d "Instala el autocompletado para tu shell"
 complete -c mcparch -n "__fish_use_subcommand" -l update -d "Busca y aplica actualizaciones para el script"
 

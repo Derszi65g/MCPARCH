@@ -75,96 +75,6 @@ function run_as_root() {
 }
 
 
-# --- NUEVO: Funciones de Utilidad de Portabilidad ---
-# Variable global para almacenar el gestor de paquetes detectado
-PKG_MANAGER=""
-
-function detect_package_manager() {
-    if command -v pacman &> /dev/null;
- then
-        PKG_MANAGER="pacman"
-    elif command -v apt-get &> /dev/null;
- then
-        PKG_MANAGER="apt"
-    elif command -v dnf &> /dev/null;
- then
-        PKG_MANAGER="dnf"
-    elif command -v xbps-install &> /dev/null;
- then
-        PKG_MANAGER="xbps"
-    elif command -v zypper &> /dev/null;
- then
-        PKG_MANAGER="zypper"
-    else
-        PKG_MANAGER="unknown"
-    fi
-    print_info "Gestor de paquetes detectado: $PKG_MANAGER"
-}
-
-function get_install_command() {
-    local packages="$*"
-    case "$PKG_MANAGER" in
-        pacman) echo "sudo pacman -S --noconfirm --needed $packages" ;;
-        apt) echo "sudo apt-get install -y $packages" ;;
-        dnf) echo "sudo dnf install -y $packages" ;;
-        xbps) echo "sudo xbps-install -S -y $packages" ;;
-        zypper) echo "sudo zypper install -y $packages" ;;
-        *) echo "" ;;
-    esac
-}
-
-function get_package_names() {
-    local deps=($@)
-    local pkg_names=()
-    for dep in "${deps[@]}"; do
-        case "$PKG_MANAGER" in
-            pacman)
-                # En Arch, la mayoría están en base-devel
-                pkg_names+=("git" "cmake" "make" "clang" "curl")
-                # Sugerir el grupo completo es más fácil para el usuario
-                print_info "En sistemas Arch, se recomienda tener 'base-devel' instalado."
-                break # Salimos del bucle porque ya añadimos todo
-                ;;
-            apt)
-                # En Debian/Ubuntu, build-essential agrupa varios
-                if [[ "$dep" == "make" || "$dep" == "clang" ]]; then
-                    # build-essential suele incluir make y un compilador C/C++
-                    [[ " ${pkg_names[*]} " =~ " build-essential " ]] || pkg_names+=("build-essential")
-                    pkg_names+=("clang")
-                else
-                    pkg_names+=("$dep")
-                fi
-                ;;
-            dnf)
-                # En Fedora, los grupos son útiles
-                pkg_names+=("git" "cmake" "make" "clang" "curl")
-                print_info "En sistemas Fedora, se recomienda 'Development Tools'."
-                break
-                ;;
-            *)
-                # Para xbps, zypper y otros, los nombres suelen ser directos
-                pkg_names+=("$dep")
-                ;;
-        esac
-    done
-    # Eliminar duplicados
-    echo "${pkg_names[@]}" | tr ' ' '\n' | sort -u | tr '\n' ' '
-}
-
-
-# --- Funciones de Compilación (Sin cambios) ---
-
-function setup_environment() {
-    print_info "Configurando el entorno de compilación..."
-    mkdir -p "$LOG_DIR"
-    mkdir -p "$ROOT_SOURCE"
-    # NUEVO: Crear directorios de configuración
-    mkdir -p "$CONFIG_DIR"
-    mkdir -p "$VERSIONS_DB_DIR"
-    cd "$ROOT_SOURCE"
-    print_success "Entorno listo en '$ROOT_SOURCE'. Logs en '$LOG_DIR'."
-}
-
 function check_dependencies() {
     print_info "Verificando dependencias de compilación..."
     local required_cmds=("git" "cmake" "make" "clang" "curl")
@@ -181,30 +91,57 @@ function check_dependencies() {
         return 0
     fi
 
-    print_warning "Faltan las siguientes dependencias: ${missing_deps[*]}"
+    print_error "Faltan dependencias de compilación esenciales: ${missing_deps[*]}"
+    print_info "Por favor, instala estas herramientas usando el gestor de paquetes de tu sistema."
+    print_info "Si no estás seguro de cómo hacerlo, puedes usar la opción '--install-deps' para que este script intente hacerlo por ti."
+    exit 1
+}
+
+function do_install_deps() {
+    print_info "Intentando instalar dependencias de compilación automáticamente..."
     
-    # Intentar instalarlas automáticamente
-    detect_package_manager
-
-    if [ "$PKG_MANAGER" = "unknown" ]; then
-        print_error "No se pudo detectar un gestor de paquetes compatible."
-        print_error "Por favor, instala manualmente las dependencias mencionadas e intenta de nuevo."
-        return 1
+    local PKG_MANAGER=""
+    if command -v pacman &> /dev/null; then PKG_MANAGER="pacman";
+    elif command -v apt-get &> /dev/null; then PKG_MANAGER="apt";
+    elif command -v dnf &> /dev/null; then PKG_MANAGER="dnf";
+    elif command -v xbps-install &> /dev/null; then PKG_MANAGER="xbps";
+    elif command -v zypper &> /dev/null; then PKG_MANAGER="zypper";
+    else
+        print_error "No se pudo detectar un gestor de paquetes compatible (apt, pacman, dnf, xbps, zypper)."
+        print_error "Por favor, instala manualmente: git, cmake, make, clang, curl."
+        exit 1
     fi
-
-    local packages_to_install
-    packages_to_install=$(get_package_names "${missing_deps[@]}")
     
-    if [ -z "$packages_to_install" ]; then
-        print_error "No se pudieron determinar los nombres de los paquetes a instalar."
-        return 1
-    fi
+    print_info "Gestor de paquetes detectado: $PKG_MANAGER"
+    
+    local packages=""
+    case "$PKG_MANAGER" in
+        pacman)
+            print_info "En sistemas Arch, se recomienda tener 'base-devel' instalado."
+            packages="base-devel git cmake make clang curl"
+            ;;
+        apt)
+            packages="build-essential git cmake make clang curl"
+            ;;
+        dnf)
+            print_info "En sistemas Fedora, se recomienda el grupo 'Development Tools'."
+            packages="git cmake make clang curl"
+            ;;
+        *)
+            packages="git cmake make clang curl"
+            ;;
+    esac
 
-    local install_command
-    install_command=$(get_install_command "$packages_to_install")
+    local install_command=""
+    case "$PKG_MANAGER" in
+        pacman) install_command="sudo pacman -S --noconfirm --needed $packages" ;;
+        apt) install_command="sudo apt-get install -y $packages" ;;
+        dnf) install_command="sudo dnf install -y $packages" ;;
+        xbps) install_command="sudo xbps-install -S -y $packages" ;;
+        zypper) install_command="sudo zypper install -y $packages" ;;
+    esac
 
     echo
-    print_info "Se puede intentar instalar las dependencias automáticamente."
     print_info "Se ejecutará el siguiente comando:"
     echo "  $install_command"
     echo
@@ -212,21 +149,18 @@ function check_dependencies() {
     case "$choice" in
         [Ss]*)
             print_info "Instalando dependencias..."
-            # Ejecutar el comando
-            eval "$install_command"
-            if [ $? -ne 0 ]; then
+            if eval "$install_command"; then
+                print_success "Dependencias instaladas correctamente."
+                print_info "Puedes proceder a compilar con la opción '--build'."
+            else
                 print_error "La instalación de dependencias falló."
                 print_error "Por favor, revisa los errores e inténtalo manualmente."
-                return 1
+                exit 1
             fi
-            print_success "Dependencias instaladas correctamente."
-            # Volver a verificar
-            check_dependencies
             ;;
         *)
             print_error "Instalación cancelada por el usuario."
-            print_error "Por favor, instala las dependencias manualmente."
-            return 1
+            exit 1
             ;;
     esac
 }
@@ -693,6 +627,7 @@ function show_usage() {
     echo "  -b, --build        Clona, compila e instala los componentes de mcpelauncher."
     echo "      --cleanup      Limpia los directorios con el código fuente después de una compilación exitosa."
     echo "  -i, --interactive  Abre el menú interactivo del lanzador."
+    echo "      --install-deps Intenta instalar las dependencias de compilación automáticamente."
     echo "      --install-completion Instala el script de autocompletado para tu shell (Bash, Zsh, Fish)."
     echo "      --update       Busca y aplica actualizaciones para este script."
     echo "  -h, --help         Muestra este mensaje de ayuda."
@@ -1273,6 +1208,10 @@ function main() {
                 ;;
             --install)
                 do_install "$@"
+                exit 0
+                ;;
+            --install-deps)
+                do_install_deps
                 exit 0
                 ;;
             --install-completion)
