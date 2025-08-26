@@ -218,7 +218,7 @@ function do_install_deps() {
     elif command -v zypper &> /dev/null; then PKG_MANAGER="zypper";
     else
         print_error "No se pudo detectar un gestor de paquetes compatible (apt, pacman, dnf, xbps, zypper)."
-        print_error "Por favor, instala manualmente: git, cmake, make, clang, curl, pkg-config, libzip-devel."
+        print_error "Por favor, instala manualmente las dependencias completas."
         exit 1
     fi
 
@@ -228,20 +228,22 @@ function do_install_deps() {
     case "$PKG_MANAGER" in
         pacman)
             print_info "En sistemas Arch, se recomienda tener 'base-devel' instalado."
-            packages="base-devel git cmake make clang curl pkg-config libzip qt5-base qt5-webengine qt5-location qt5-declarative qt5-quickcontrols2"
+            packages="base-devel git cmake make clang curl pkg-config libzip qt5-base qt5-webengine qt5-location qt5-declarative qt5-quickcontrols2 ca-certificates libpng libx11 libxi systemd libevdev mesa alsa-lib libpulse libxtst openssl qt5-svg"
             ;;
         apt)
-            packages="build-essential git cmake make clang curl pkg-config libzip-dev"
+            packages="build-essential git cmake make clang curl pkg-config libzip-dev ca-certificates libc6-dev libpng-dev libx11-dev libxi-dev libcurl4-openssl-dev libsystemd-dev libevdev-dev libegl1-mesa-dev libasound2-dev libpulse-dev libxtst-dev libssl-dev qtbase5-dev qtwebengine5-dev qtdeclarative5-dev libqt5svg5-dev qtquickcontrols2-5-dev libqt5quickcontrols2-5 qttools5-dev-tools libudev-dev libstdc++-12-dev qml-module-qtquick-controls qml-module-qtquick-layouts qml-module-qtquick-dialogs qml-module-qtquick-window2 qml-module-qtwebengine qml-module-org-kde-qqc2desktopstyle"
             ;;
         dnf)
             print_info "En sistemas Fedora, se recomienda el grupo 'Development Tools'."
-            packages="git cmake make clang curl pkg-config libzip-devel"
+            packages="git cmake make clang curl pkg-config libzip-devel ca-certificates libstdc++ glibc-devel libpng-devel libX11-devel libXi-devel libcurl-devel systemd-devel libevdev-devel mesa-libEGL-devel alsa-lib-devel pulseaudio-libs-devel mesa-dri-drivers libXtst-devel openssl-devel qt5-qtbase-devel qt5-qtwebengine-devel qt5-qtdeclarative-devel qt5-qtsvg-devel qt5-qtquickcontrols qt5-qtquickcontrols2"
             ;;
         xbps)
-            packages="git cmake make clang curl pkg-config libzip-devel openssl-devel libX11-devel wayland-devel alsa-lib-devel libXext-devel libXi-devel libpng-devel MesaLib-devel libevdev-devel qt5-devel qt5-webengine-devel qt5-webchannel-devel qt5-location-devel qt5-declarative-devel qt5-quickcontrols2-devel libatomic-devel"
+            # La lista de xbps ya era bastante completa, la mantenemos y aseguramos que no falte nada clave.
+            packages="git cmake make clang curl pkg-config libzip-devel openssl-devel libX11-devel wayland-devel alsa-lib-devel libXext-devel libXi-devel libpng-devel MesaLib-devel libevdev-devel qt5-devel qt5-webengine-devel qt5-webchannel-devel qt5-location-devel qt5-declarative-devel qt5-quickcontrols2-devel libatomic-devel libpulse-devel"
             ;;
         zypper)
-            packages="git cmake make clang curl pkg-config libzip-devel"
+            # Lista similar a DNF para OpenSUSE
+            packages="git cmake make clang curl pkg-config libzip-devel ca-certificates libstdc++6-devel glibc-devel libpng16-devel libX11-devel libXi-devel libcurl-devel systemd-devel libevdev-devel Mesa-libEGL1-devel alsa-devel pulseaudio-devel libXtst-devel libopenssl-devel"
             ;;
         *)
             # Fallback genérico
@@ -271,7 +273,7 @@ function do_install_deps() {
                 print_info "Puedes proceder a compilar con la opción '--build'."
             else
                 print_error "La instalación de dependencias falló."
-                print_error "Por favor, revisa los errores e inténtalo manualmente."
+                print_error "Por favor, revisa los errores e inténtalo manually."
                 exit 1
             fi
             ;;
