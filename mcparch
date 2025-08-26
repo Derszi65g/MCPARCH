@@ -239,7 +239,7 @@ function do_install_deps() {
             ;;
         xbps)
             # La lista de xbps ya era bastante completa, la mantenemos y aseguramos que no falte nada clave.
-            packages="git cmake make clang curl pkg-config libzip-devel openssl-devel libX11-devel wayland-devel alsa-lib-devel libXext-devel libXi-devel libpng-devel MesaLib-devel libevdev-devel qt5-devel qt5-webengine-devel qt5-webchannel-devel qt5-location-devel qt5-declarative-devel qt5-quickcontrols2-devel libatomic-devel libpulse-devel"
+            packages="git cmake make clang curl pkg-config libzip-devel openssl-devel libX11-devel wayland-devel alsa-lib-devel libXext-devel libXi-devel libpng-devel MesaLib-devel libevdev-devel qt5-devel qt5-webengine-devel qt5-webchannel-devel qt5-location-devel qt5-declarative-devel qt5-quickcontrols2-devel libatomic-devel"
             ;;
         zypper)
             # Lista similar a DNF para OpenSUSE
@@ -1192,7 +1192,7 @@ function do_setup_path() {
     local install_dir="/usr/local/bin"
 
     case "$shell_name" in
-        bash|zsh) 
+        bash|zsh)
             local config_file=""
             if [ "$shell_name" = "bash" ]; then
                 config_file="$HOME/.bashrc"
@@ -1201,7 +1201,7 @@ function do_setup_path() {
             fi
 
             local export_line="export PATH=\"$PATH:$install_dir\""
-            
+
             # Comprobar si la línea o una similar ya existe
             if [ -f "$config_file" ] && grep -q -E "export PATH=.*$install_dir" "$config_file"; then
                 print_success "El PATH ya está configurado en '$config_file'."
@@ -1212,7 +1212,7 @@ function do_setup_path() {
                 print_success "¡Configuración completada!"
                 print_info "Por favor, reinicia tu terminal o ejecuta 'source $config_file' para aplicar los cambios."
             fi
-            ;; 
+            ;;
         fish)
             local config_file="$HOME/.config/fish/config.fish"
             local fish_path_line="fish_add_path $install_dir"
@@ -1230,13 +1230,13 @@ function do_setup_path() {
                 print_success "¡Configuración completada!"
                 print_info "Por favor, reinicia tu terminal para aplicar los cambios."
             fi
-            ;; 
+            ;;
         *)
             print_warning "Shell '$shell_name' no soportado para la configuración automática del PATH."
             print_info "Por favor, añade la siguiente línea a tu archivo de configuración manualmente:"
             echo "  export PATH=\"
 $PATH:$install_dir\""
-            ;; 
+            ;;
     esac
 }
 
