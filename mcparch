@@ -436,9 +436,11 @@ function get_apk_path() {
 
 function do_add_version() {
     print_info "Añadiendo una nueva versión de Minecraft..."
-    if ! command -v mcpelauncher-extract &> /dev/null; then
-        check_path_and_warn # <--- LLAMADA A LA NUEVA FUNCIÓN
-        print_error "Comando 'mcpelauncher-extract' no encontrado."
+    # MEJORA: Usar ruta absoluta para no depender del PATH
+    local extractor_bin="/usr/local/bin/mcpelauncher-extract"
+    if ! [ -x "$extractor_bin" ]; then
+        check_path_and_warn # Aún es útil para advertir al usuario
+        print_error "Ejecutable '$extractor_bin' no encontrado o no es ejecutable."
         print_error "Por favor, ejecuta el script con la opción '-b' para compilar los componentes primero."
         exit 1
     fi
@@ -472,7 +474,8 @@ function do_add_version() {
 
     print_info "Extrayendo archivos a '$target_dir'..."
     mkdir -p "$target_dir"
-    mcpelauncher-extract "$apk_path" "$target_dir"
+    # MEJORA: Usar ruta absoluta
+    "$extractor_bin" "$apk_path" "$target_dir"
 
     # Guardar en la base de datos de versiones
     echo "$target_dir" > "$VERSIONS_DB_DIR/$version_id"
@@ -577,7 +580,7 @@ function run_game() {
         exit 1
     fi
     print_info "Iniciando Minecraft desde '$game_path'..."
-    mcpelauncher-client -dg "$game_path" || true
+    /usr/local/bin/mcpelauncher-client -dg "$game_path" || true
     print_success "El juego se ha cerrado."
 }
 
@@ -1029,7 +1032,7 @@ function do_uninstall() {
 
 function do_launch() {
     print_info "Iniciando en modo lanzador..."
-    if ! command -v mcpelauncher-client &> /dev/null; then
+    if ! [ -x "/usr/local/bin/mcpelauncher-client" ]; then
         check_path_and_warn # <--- LLAMADA A LA NUEVA FUNCIÓN
         print_error "Comando 'mcpelauncher-client' no encontrado."
         print_error "Por favor, ejecuta el script con la opción '-b' para compilar los componentes primero."
@@ -1093,7 +1096,7 @@ function do_run_specific() {
         exit 1
     fi
 
-    if ! command -v mcpelauncher-client &> /dev/null; then
+    if ! [ -x "/usr/local/bin/mcpelauncher-client" ]; then
         check_path_and_warn # <--- LLAMADA A LA NUEVA FUNCIÓN
         print_error "Comando 'mcpelauncher-client' no encontrado."
         print_error "Por favor, ejecuta el script con la opción '-b' para compilar los componentes primero."
@@ -1141,9 +1144,13 @@ function do_create_shortcut() {
     mkdir -p "$desktop_dir"
     local shortcut_file="$desktop_dir/mcparch-$version_id.desktop"
 
-    # Usar el comando instalado si existe, si no, la ruta del script
-    local exec_command="mcparch"
-    if ! command -v mcparch &> /dev/null; then
+    # Usar siempre la ruta absoluta para el comando Exec
+    local exec_command
+    if command -v mcparch &> /dev/null; then
+        # Si está instalado, obtener su ruta absoluta
+        exec_command=$(command -v mcparch)
+    else
+        # Si no, usar la ruta absoluta del script actual
         exec_command=$(realpath "$0")
     fi
 
@@ -1154,8 +1161,8 @@ function do_create_shortcut() {
 [Desktop Entry]
 Version=1.0
 Name=Minecraft PE ($version_id)
-Comment=Lanza Minecraft PE usando MCPARCH
-Exec=$exec_command --run $version_id
+Comment=Juega a Minecraft Bedrock Edition
+Exec="$exec_command" --run "$version_id"
 Icon=mcparch
 Terminal=false
 Type=Application
@@ -1165,8 +1172,14 @@ EOF
     # Hacer el archivo ejecutable
     chmod +x "$shortcut_file"
 
+    # MEJORA: Actualizar la base de datos de aplicaciones para que el cambio sea inmediato
+    if command -v update-desktop-database &> /dev/null; then
+        print_info "Actualizando la base de datos de aplicaciones..."
+        update-desktop-database "$desktop_dir"
+    fi
+
     print_success "Acceso directo creado en '$shortcut_file'."
-    print_info "Puede que necesites reiniciar tu sesión para que aparezca en el menú de aplicaciones."
+    print_info "Debería aparecer en tu menú de aplicaciones en breve."
 }
 
 function do_setup_path() {
