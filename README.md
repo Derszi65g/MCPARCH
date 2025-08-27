@@ -173,5 +173,8 @@ Para activar el autocompletado en este modo, ejecuta:
 Luego, reinicia tu terminal o ejecuta `source ~/.bashrc` (o el archivo de configuración correspondiente a tu shell).
 
 
+## Inspiración y Créditos
+`mcparch` se inspira en gran medida en el proyecto `CC-MC` de Crow_Rei34, el cual sirvió como una excelente base y fuente de aprendizaje para este gestor y lanzador. Puedes encontrar el proyecto original aquí: [CC-MC by Crow_Rei34](https://codeberg.org/Crow_Rei34/CC-MC/)
+
 ## Mensaje para Usuarios
 Este proyecto no apoya ni promueve la piratería de software. El uso de mcparch debe realizarse respetando las licencias y los términos de servicio de Minecraft: Bedrock Edition y sus desarrolladores. Este script está diseñado para facilitar la gestión y ejecución de versiones legítimas del juego en sistemas Linux usando archivos .apk obtenidos legalmente. El usuario es responsable de cumplir con las leyes aplicables al usar este software.
