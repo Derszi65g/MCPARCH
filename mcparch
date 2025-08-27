@@ -797,20 +797,17 @@ function do_build() {
 function do_update() {
     print_info "Buscando actualizaciones para mcparch..."
 
-    # MEJORA: Asegurarse de que estamos en un repositorio de Git
     if ! git rev-parse --is-inside-work-tree &> /dev/null; then
         print_error "Esta función solo se puede ejecutar desde el directorio del proyecto clonado con Git."
         exit 1
     fi
 
-    # NUEVO: Comprobar si hay cambios locales sin guardar
     if ! git diff-index --quiet HEAD --; then
         print_error "Tienes cambios locales sin guardar (uncommitted changes)."
         print_warning "Por favor, guarda tus cambios (con 'git commit' o 'git stash') antes de actualizar."
         exit 1
     fi
 
-    # MEJORA: Obtener el nombre de la rama principal de forma más segura
     local main_branch
     if ! main_branch=$(git symbolic-ref --short HEAD 2>/dev/null); then
         print_error "No se pudo determinar la rama actual. Estás en un estado 'detached HEAD'."
@@ -824,28 +821,26 @@ function do_update() {
         exit 1
     fi
 
-    # MEJORA: Usar git describe para obtener versiones legibles
-    local local_version
-    local_version=$(git describe --tags --always --dirty=-modified)
-    local remote_version
-    remote_version=$(git describe --tags --always "origin/$main_branch")
-
-    # MEJORA: Comparar los commits reales para más fiabilidad
     local local_commit
     local_commit=$(git rev-parse HEAD)
     local remote_commit
     remote_commit=$(git rev-parse "origin/$main_branch")
 
     if [ "$local_commit" = "$remote_commit" ]; then
+        local local_version
+        local_version=$(git describe --tags --always --dirty=-modified)
         print_success "¡Ya estás en la última versión: $local_version!"
         exit 0
     fi
 
-    # NUEVO: Lógica mejorada para comparar versiones
     local base_commit
     base_commit=$(git merge-base HEAD "origin/$main_branch")
 
     if [ "$base_commit" = "$remote_commit" ]; then
+        local local_version
+        local_version=$(git describe --tags --always --dirty=-modified)
+        local remote_version
+        remote_version=$(git describe --tags --always "origin/$main_branch")
         print_success "Estás por delante de la versión remota. Tienes commits locales que no se han subido."
         print_info "  Tu versión: $local_version"
         print_info "  Versión remota: $remote_version"
@@ -855,17 +850,40 @@ function do_update() {
 
     if [ "$base_commit" != "$local_commit" ]; then
         print_warning "Tu rama local y la rama remota han divergido."
-        print_info "La actualización forzará tu copia local para que coincida con la remota, descartando tus cambios."
+        print_warning "La actualización forzará tu copia local para que coincida con la remota."
     fi
 
-    print_info "¡Hay una nueva versión disponible!"
-    print_info "  Versión actual: $local_version"
-    print_info "  Nueva versión:  $remote_version"
+    # --- INICIO DE LA MEJORA VISUAL ---
+    print_success "¡Nueva versión encontrada!"
     echo
-    print_info "Cambios:"
-    echo "--------------------------------------------------"
-    git --no-pager log --pretty=format:"- %s (por %an, %ar)" "$local_commit..$remote_commit"
-    echo "--------------------------------------------------"
+
+    local local_version
+    local_version=$(git describe --tags --always --dirty=-modified)
+    local remote_version
+    remote_version=$(git describe --tags --always "origin/$main_branch")
+
+    # Obtener la lista de cambios
+    local changelog
+    changelog=$(git --no-pager log --pretty=format:"  • %s (por %an, %ar)" "$local_commit..$remote_commit")
+
+    # Imprimir el cuadro de actualización
+    echo "╔═════════════════════════════════════════════╗"
+    echo "║          ACTUALIZACIÓN DISPONIBLE           ║"
+    echo "╠═════════════════════════════════════════════╣"
+    echo "║                                             ║"
+    printf "║   %-18s %-25s ║\n" "Versión actual:" "$local_version"
+    printf "║   %-18s %-25s ║\n" "Nueva versión:" "$remote_version"
+    echo "║                                             ║"
+    echo "╠═══════════ Cambios en esta versión ══════════╣"
+    echo "║                                             ║"
+    # Imprimir cada línea del changelog dentro del cuadro
+    echo "$changelog" | while IFS= read -r line; do
+        printf "║ %-43s ║\n" "$line"
+    done
+    echo "║                                             ║"
+    echo "╚═════════════════════════════════════════════╝"
+    echo
+    # --- FIN DE LA MEJORA VISUAL ---
 
     read -p "¿Deseas actualizar ahora? (s/n): " choice
     case "$choice" in
