@@ -23,6 +23,7 @@ readonly LOG_DIR="$SCRIPT_CWD/logs"
 readonly ROOT_SOURCE="$HOME/src"
 readonly EXTRACTOR_SRC_DIR="mcpelauncher-extract-src"
 readonly LAUNCHER_SRC_DIR="mcpelauncher-src"
+readonly MSA_SRC_DIR="msa-src"
 readonly ZLIB_BUILD_DIR="$ROOT_SOURCE/zlib_build"
 readonly ZLIB_LIB_PATH="$ZLIB_BUILD_DIR/lib/libz.a"
 readonly ZLIB_INCLUDE_PATH="$ZLIB_BUILD_DIR/include"
@@ -41,6 +42,7 @@ CLEANUP_AFTER_BUILD=false
 # Variables para desinstalación
 readonly LAUNCHER_BUILD_DIR="$ROOT_SOURCE/mcpelauncher-src/build"
 readonly EXTRACTOR_BUILD_DIR="$ROOT_SOURCE/mcpelauncher-extract-src/build"
+readonly MSA_BUILD_DIR="$ROOT_SOURCE/msa-src/build"
 readonly DESKTOP_FILE="$HOME/.local/share/applications/MCPE-LAUNCHER.desktop"
 readonly ICON_FILE="$HOME/.local/share/icons/hicolor/scalable/apps/MCPE-LAUNCHER.svg"
 readonly GAME_DATA_DIR="$HOME/.local/share/mcpelauncher"
@@ -238,7 +240,7 @@ function do_install_deps() {
             packages="git cmake make clang curl pkg-config libzip-devel ca-certificates libstdc++ glibc-devel libpng-devel libX11-devel libXi-devel libcurl-devel systemd-devel libevdev-devel mesa-libEGL-devel alsa-lib-devel pulseaudio-libs-devel mesa-dri-drivers libXtst-devel openssl-devel qt5-qtbase-devel qt5-qtwebengine-devel qt5-qtdeclarative-devel qt5-qtsvg-devel qt5-qtquickcontrols qt5-qtquickcontrols2"
             ;;
         xbps)
-            # La lista de xbps ya era bastante completa, la mantenemos y aseguramos que no falte nada clave.
+            # Lista para Void, actualizada para incluir dependencias de MSA/GUI
             packages="git cmake make clang curl pkg-config libzip-devel openssl-devel libX11-devel wayland-devel alsa-lib-devel libXext-devel libXi-devel libpng-devel MesaLib-devel libevdev-devel qt5-devel qt5-webengine-devel qt5-webchannel-devel qt5-location-devel qt5-declarative-devel qt5-quickcontrols2-devel libatomic-devel"
             ;;
         zypper)
@@ -639,6 +641,8 @@ function uninstall_component() {
         executable_name="mcpelauncher-client"
     elif [ "$component_name" = "extractor" ]; then
         executable_name="mcpelauncher-extract"
+    elif [ "$component_name" = "msa" ]; then
+        executable_name="msa-daemon"
     else
         print_error "Nombre de componente desconocido: $component_name"
         return 1
@@ -778,11 +782,57 @@ function show_usage() {
     echo "  iniciará el juego de forma interactiva si hay varias versiones y ninguna es la predeterminada."
 }
 
+function compile_msa() {
+    print_info "Verificando instalación de dependencia MSA (Microsoft Authentication)..."
+    if command -v msa-daemon &> /dev/null; then
+        print_success "Dependencia MSA ya está instalada. Omitiendo compilación."
+        return
+    fi
+
+    print_info "Iniciando compilación de MSA..."
+    cd "$ROOT_SOURCE"
+
+    if [ -d "$MSA_SRC_DIR" ]; then
+        print_info "Directorio '$MSA_SRC_DIR' encontrado. Actualizando..."
+        cd "$MSA_SRC_DIR"
+        git pull &> "$LOG_DIR/msa_git.log"
+    else
+        print_info "Clonando msa-manifest... (ver '$LOG_DIR/msa_git.log')"
+        git clone --recursive https://github.com/minecraft-linux/msa-manifest.git "$MSA_SRC_DIR" &> "$LOG_DIR/msa_git.log"
+        cd "$MSA_SRC_DIR"
+    fi
+
+    # Limpiar compilaciones anteriores para asegurar un estado limpio
+    rm -rf build
+
+    print_info "Configurando con CMake... (ver '$LOG_DIR/msa_configure.log')"
+    mkdir -p build
+    cd build
+    cmake -DENABLE_MSA_QT_UI=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCMAKE_POLICY_VERSION_MINIMUM=3.5 .. &> "$LOG_DIR/msa_configure.log"
+
+    print_info "Compilando MSA... (ver '$LOG_DIR/msa_build.log')"
+    make -j"$(nproc)" &> "$LOG_DIR/msa_build.log"
+
+    print_info "Instalando MSA... (ver '$LOG_DIR/msa_install.log')"
+    run_as_root make install &> "$LOG_DIR/msa_install.log"
+
+    # Guardar el manifiesto de instalación para una desinstalación robusta
+    local manifest_path="install_manifest.txt"
+    if [ -f "$manifest_path" ]; then
+        cp "$manifest_path" "$CONFIG_DIR/msa_install_manifest.txt"
+        print_info "Manifiesto de instalación para 'msa' guardado."
+    fi
+
+    cd ../..
+    print_success "Dependencia MSA compilada e instalada."
+}
+
 function do_build() {
     print_info "Iniciando proceso de compilación completo..."
     setup_environment
     check_dependencies
     compile_extractor
+    compile_msa
     compile_launcher
     print_success "¡Proceso de compilación completado!"
     print_info "Todos los componentes necesarios están instalados."
@@ -1040,6 +1090,8 @@ function do_uninstall() {
     uninstall_component "launcher" "$LAUNCHER_BUILD_DIR"
     echo
     uninstall_component "extractor" "$EXTRACTOR_BUILD_DIR"
+    echo
+    uninstall_component "msa" "$MSA_BUILD_DIR"
     echo
     cleanup_desktop_integration
     ask_and_cleanup_dir "datos del juego" "$GAME_DATA_DIR"
