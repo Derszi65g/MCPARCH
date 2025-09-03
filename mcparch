@@ -243,7 +243,7 @@ function do_install_deps() {
             ;;
         zypper)
             # Lista similar a DNF para OpenSUSE
-            packages="git cmake make clang curl pkg-config libzip-devel ca-certificates libstdc++6-devel glibc-devel libpng16-devel libX11-devel libXi-devel libcurl-devel systemd-devel libevdev-devel Mesa-libEGL1-devel alsa-devel pulseaudio-devel libXtst-devel libopenssl-devel"
+            packages="git cmake make clang curl pkg-config libzip-devel ca-certificates libstdc++6-devel-gcc13 glibc-devel libpng16-devel libX11-devel libXi-devel libcurl-devel systemd-devel libevdev-devel Mesa-libEGL-devel alsa-devel pulseaudio-devel libXtst-devel libopenssl-devel"
             ;;
         *)
             # Fallback genérico
