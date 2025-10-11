@@ -7,21 +7,62 @@ _mcparch_completions() {
     cur_word="${COMP_WORDS[COMP_CWORD]}"
     prev_word="${COMP_WORDS[COMP_CWORD-1]}"
 
-    # Opciones que no esperan un ID de versión
-    local opts_no_arg="-a --add -l --list -b --build --cleanup -u --uninstall --uninstall-system -i --interactive -h --help --install --install-deps --install-completion --update --setup-path -sp"
-    # Opciones que SÍ esperan un ID de versión
-    local opts_with_arg="-r --run --set-default --create-shortcut -d --remove-version"
-    local all_opts="$opts_no_arg $opts_with_arg"
+    # Opciones
+    local all_opts="--install -in \
+    --uninstall -u \
+    --uninstall-script -us \
+    --build -b \
+    --cleanup -cl \
+    --interactive -i \
+    --install-deps -id \
+    --install-completion -ic \
+    --setup-path -sp \
+    --update -up \
+    --check -c \
+    --help -h \
+    --add -a \
+    --add-gui -ad \
+    --list -l \
+    --remove -d \
+    --rename -ri \
+    --run -r \
+    --set-default -sd \
+    --shortcut -cs \
+    --get-binary -gb \
+    --add-repo -ar \
+    --remove-repo -rr \
+    --list-repos -lr \
+    --sync-repos -sr \
+    --export -ep \
+    --import -ip \
+    --icon -ic"
 
     local versions_db_dir="$HOME/.config/mcparch/versions_db"
 
     # Sugerir IDs de versión si el comando anterior lo requiere
     case "$prev_word" in
-        -r|--run|--set-default|--create-shortcut|-d|--remove-version)
+        -d|--remove|-r|--run|-sd|--set-default|-cs|--shortcut|-ri|--rename)
             if [ -d "$versions_db_dir" ]; then
                 local versions
                 versions=$(ls "$versions_db_dir")
                 COMPREPLY=( $(compgen -W "${versions}" -- "${cur_word}") )
+            fi
+            return 0
+            ;;
+        -ic|--icon)
+            local script_path
+            script_path=$(realpath "${COMP_WORDS[0]}" 2>/dev/null)
+            local icons_dir
+            if [ -n "$script_path" ]; then
+                icons_dir=$(dirname "$script_path")/icons
+            fi
+
+            if [ -d "$icons_dir" ]; then
+                local icon_files=$( (cd "$icons_dir" && compgen -f -- "${cur_word}") )
+                COMPREPLY=( ${icon_files} )
+            else
+                # Si no hay carpeta de iconos, autocompletado de archivos normal
+                COMPREPLY=( $(compgen -f -- "${cur_word}") )
             fi
             return 0
             ;;
