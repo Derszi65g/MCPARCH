@@ -21,7 +21,9 @@
 
 ## SHORTCUT
 
-![](/assets/SHORTCUT.png)
+| Icono default | Icono Personalizado |
+| :--------------: | :--------------: |
+| ![](/assets/SHORTCUT.png) | ![](/assets/SHORTCUT_2.png) |
 
 ## TUI MODE
 
