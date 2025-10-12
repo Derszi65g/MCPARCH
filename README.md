@@ -219,3 +219,11 @@ Comportamiento por defecto:
 
 ## Mensaje para Usuarios
 Este proyecto no apoya ni promueve la piratería de software. El uso de mcparch debe realizarse respetando las licencias y los términos de servicio de Minecraft: Bedrock Edition y sus desarrolladores. Este script está diseñado para facilitar la gestión y ejecución de versiones legítimas del juego en sistemas Linux usando archivos .apk obtenidos legalmente. El usuario es responsable de cumplir con las leyes aplicables al usar este software.
+
+
+---
+### Únete a la Comunidad
+
+¿Tienes dudas, sugerencias o simplemente quieres charlar? Te esperamos en nuestro servidor de Discord.
+
+[**Únete a nuestro Discord**](https://discord.gg/mwqYppvnVw)
