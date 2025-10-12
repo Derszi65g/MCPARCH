@@ -1432,22 +1432,16 @@ function do_update() {
     local changelog
     changelog=$(git --no-pager log --pretty=format:"  • %s (por %an, %ar)" "$local_commit..$remote_commit")
 
-    # Imprimir el cuadro de actualización
-    echo "╔═════════════════════════════════════════════╗"
-    echo "║          ACTUALIZACIÓN DISPONIBLE           ║"
-    echo "╠═════════════════════════════════════════════╣"
-    echo "║                                             ║"
-    printf "║   %-18s %-25s ║\n" "Versión actual:" "$local_version"
-    printf "║   %-18s %-25s ║\n" "Nueva versión:" "$remote_version"
-    echo "║                                             ║"
-    echo "╠═══════════ Cambios en esta versión ══════════╣"
-    echo "║                                             ║"
-    # Imprimir cada línea del changelog dentro del cuadro
-    echo "$changelog" | while IFS= read -r line; do
-        printf "║ %-43s ║\n" "$line"
-    done
-    echo "║                                             ║"
-    echo "╚═════════════════════════════════════════════╝"
+    # --- Estilo nuevo, más limpio ---
+    echo "--------------------------------------------------"
+    echo -e "  \e[1mActualización de MCPARCH disponible\e[0m"
+    echo "--------------------------------------------------"
+    printf "  %-20s %s\n" "Versión actual:" "$local_version"
+    printf "  %-20s %s\n" "Nueva versión:" "$remote_version"
+    echo
+    echo -e "  \e[1mCambios:\e[0m"
+    echo "$changelog"
+    echo "--------------------------------------------------"
     echo
     # --- FIN DE LA MEJORA VISUAL ---
 
