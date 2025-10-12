@@ -222,8 +222,19 @@ Este proyecto no apoya ni promueve la piratería de software. El uso de mcparch 
 
 
 ---
+
+
 ### Únete a la Comunidad
+
+
+
+
 
 ¿Tienes dudas, sugerencias o simplemente quieres charlar? Te esperamos en nuestro servidor de Discord.
 
-[**Únete a nuestro Discord**](https://discord.gg/mwqYppvnVw)
+
+
+
+
+[![](https://img.shields.io/discord/1378956735901073518?color=5865F2&logo=discord&logoColor=white)](https://discord.gg/mwqYppvnVw)
+
