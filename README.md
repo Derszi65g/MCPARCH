@@ -37,15 +37,30 @@
 
 ## Requisitos Previos
 
-Antes de compilar, asegúrate de tener instaladas las siguientes herramientas:
--   `git`
--   `cmake`
--   `make`
--   `clang`
--   `curl`
--   `jq`
+Para usar `mcparch`, necesitas algunas herramientas básicas. Las hemos dividido en dos grupos: las que necesita el script para funcionar y las que solo son necesarias si vas a compilar.
 
-Puedes instalarlas manualmente o dejar que el script lo intente por ti con la opción `-id` o `--install-deps`.
+### Dependencias del Script (Esenciales)
+
+Estas son necesarias para que la mayoría de las funciones de `mcparch` (como la gestión de repositorios, la actualización del script y la instalación de binarios) funcionen correctamente.
+
+-   **`git`**: Para clonar y actualizar el script desde GitHub.
+-   **`curl`**: Para descargar archivos de internet (binarios, plugins, etc.).
+-   **`jq`**: **¡Muy importante!** Se usa para leer y procesar los archivos `sources.json` de los repositorios. Sin `jq`, la gestión de binarios y plugins no funcionará.
+-   **`zenity`** (Opcional): Necesario únicamente si quieres usar el selector de archivos gráfico con la opción `--add-gui`.
+
+La mayoría de los sistemas ya incluyen `git` y `curl`. Puedes instalar `jq` y `zenity` con el gestor de paquetes de tu distribución (ej: `sudo pacman -S jq zenity`).
+
+### Dependencias de Compilación (Opcional)
+
+Estas dependencias **solo son necesarias si planeas compilar `mcpelauncher` desde el código fuente** usando la opción `-b` (`--build`). Si vas a usar binarios precompilados (`-gb`), no necesitas instalar esto (en teoria).
+
+El proceso de compilación requiere herramientas como `cmake`, `make`, `clang`, `pkg-config` y una serie de librerías de desarrollo (como `qt5`, `libzip`, `openssl`, etc.).
+
+La forma más sencilla de instalarlas es dejar que `mcparch` lo haga por ti:
+```bash
+mcparch --install-deps
+```
+Este comando detectará tu distribución de Linux e intentará instalar el grupo completo de paquetes necesarios.
 
 ## Instalación y Primeros Pasos
 
