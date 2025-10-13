@@ -16,6 +16,7 @@
 -   **Integración con el Escritorio:** Crea y actualiza accesos directos `.desktop` en el menú de aplicaciones, permitiendo personalizar el icono.
 -   **Autocompletado de Shell:** Instalación automática de autocompletado para **Bash, Fish y Zsh**, con todos los nuevos comandos y alias.
 -   **Desinstalación Flexible:** Permite desinstalar solo el script o realizar una limpieza completa de todos los datos.
+-   **Sistema de Plugins:** Extiende la funcionalidad de `mcparch` con comandos y características personalizadas a través de un sistema de plugins simple.
 
 # Vistazo Rápido
 
@@ -168,6 +169,118 @@ MCPARCH ahora cuenta con un sistema de plugins para extender su funcionalidad.
 -   **`mcparch p --add <RUTA.tar.gz>`**: Instala un nuevo plugin desde un paquete.
 -   **`mcparch p --remove <COMANDO>`**: Desinstala un plugin por su comando.
 -   **`mcparch p --list`**: Lista todos los plugins instalados.
+
+### Para Desarrolladores: Creando Repositorios
+
+Cualquier persona puede crear y alojar un archivo `sources.json` (por ejemplo, en un repositorio de GitHub o en un Gist) para compartir tanto binarios precompilados como plugins con la comunidad. `mcparch` puede añadir cualquier URL que apunte a un archivo `sources.json` válido.
+
+#### Estructura Base del `sources.json`
+
+El archivo tiene una estructura simple, con un objeto principal `repository` que define el nombre y el tipo de contenido que provee.
+
+```json
+{
+  "repository": {
+    "name": "Mi-Repo-Personal",
+    "type": "precompiled"
+  },
+  "precompiled": {
+    "...": "..."
+  }
+}
+```
+
+-   `repository.name`: Un nombre único para tu repositorio.
+-   `repository.type`: Define cómo `mcparch` debe interpretar el contenido. Los tipos oficiales son `precompiled` y `plugins`. Sin embargo, este campo es extensible (ver más abajo).
+
+#### Ejemplo: Repositorio de Binarios (`"type": "precompiled"`)
+
+Este tipo se usa para distribuir los componentes del launcher ya compilados. `mcparch` buscará la clave `"precompiled"` en el JSON.
+
+```json
+{
+  "repository": {
+    "name": "Mis-Binarios-x86_64",
+    "type": "precompiled"
+  },
+  "precompiled": {
+    "mcparch-1.0-x86_64": {
+      "description": "Launcher v2.0 para x86_64",
+      "url": "https://github.com/mi-usuario/mi-repo/releases/download/v1.0/mcparch-portable-x86_64.tar.gz",
+      "compatibility": {
+        "architectures": ["x86_64"]
+      }
+    },
+    "mcparch-1.0-aarch64": {
+      "description": "Launcher v1.0 para aarch64",
+      "url": "https://github.com/mi-usuario/mi-repo/releases/download/v1.0/mcparch-portable-aarch64.tar.gz",
+      "compatibility": {
+        "architectures": ["aarch64"]
+      }
+    }
+  }
+}
+```
+
+-   **Clave del Objeto (`mcparch-1.0-x86_64`):** Es un ID único para el binario.
+-   `description`: Texto que se mostrará al usuario en la lista de `mcparch -gb`.
+-   `url`: Un enlace de descarga **directa** al archivo `.tar.gz` creado con `mcparch -ep`.
+-   `compatibility.architectures`: Una lista de arquitecturas compatibles (ej: `x86_64`, `aarch64`). `mcparch` usará esto para marcar el binario como `(Recomendado)` si coincide con la del usuario.
+
+#### Ejemplo: Repositorio de Plugins (`"type": "plugins"`)
+
+Este tipo se usa para distribuir plugins. `mcparch` buscará la clave `"plugins"` en el JSON.
+
+```json
+{
+  "repository": {
+    "name": "Mis-Plugins-Geniales",
+    "type": "plugins"
+  },
+  "plugins": {
+    "theme-manager": {
+      "version": "1.2.0",
+      "description": "Gestiona temas para la UI del launcher",
+      "url": "https://github.com/mi-usuario/mi-repo/releases/download/v1.2/theme-manager.tar.gz"
+    },
+    "backup-tool": {
+      "version": "2.0.0",
+      "description": "Crea copias de seguridad de tus mundos",
+      "url": "https://github.com/mi-usuario/mi-repo/releases/download/v2.0/backup-tool.tar.gz"
+    }
+  }
+}
+```
+
+-   **Clave del Objeto (`theme-manager`):** Es el **comando** que el plugin registrará en `mcparch`. Debe ser único.
+-   `version`: La versión del plugin. Se usa para detectar actualizaciones.
+-   `description`: Texto que se mostrará al usuario en la lista de `mcparch p --get`.
+-   `url`: Un enlace de descarga **directa** al paquete `.tar.gz` del plugin.
+
+#### Extensibilidad: ¡Crea tu Propio `type`!
+
+El campo `type` no está limitado a los valores oficiales. Un desarrollador puede crear un plugin para `mcparch` que defina y utilice un nuevo tipo de repositorio.
+
+**Ejemplo hipotético:**
+
+1.  Un desarrollador crea un plugin llamado `texture-pack-manager`.
+2.  Este plugin está programado para buscar repositorios con `"type": "textures"`.
+3.  El desarrollador publica un `sources.json` con este nuevo tipo:
+
+    ```json
+    {
+      "repository": {
+        "name": "Packs-de-Texturas-HD",
+        "type": "textures"
+      },
+      "texture_packs": {
+        "textura-hd-1": { "url": "..." }
+      }
+    }
+    ```
+4.  Cuando un usuario instala el plugin `texture-pack-manager` y añade el repositorio, el plugin puede usar el comando `mcparch p texture-pack-manager --install textura-hd-1` para descargar y gestionar el contenido definido en el JSON.
+
+Esto permite que el ecosistema de `mcparch` crezca con nuevas funcionalidades sin necesidad de modificar el script principal.
 
 ### Mantenimiento del Script
 
