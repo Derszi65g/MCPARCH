@@ -23,6 +23,33 @@ function __mcparch_get_versions
     end
 end
 
+# Función para obtener los plugins instalados
+function __mcparch_get_installed_plugins
+    set plugins_conf "$HOME/.config/mcparch/plugins.conf"
+    if test -f "$plugins_conf"
+        cut -d':' -f1 "$plugins_conf"
+    end
+end
+
+# Función para obtener los repositorios de plugins
+function __mcparch_get_plugin_repos
+    set repos_conf "$HOME/.config/mcparch/repositories.conf"
+    if test -f "$repos_conf"
+        awk '/plugins/ {gsub(/"/, "", $1); print $1}' "$repos_conf"
+    end
+end
+
+# --- Subcomando de Plugins ---
+complete -c mcparch -n "__fish_use_subcommand" -a p -d "Gestiona los plugins"
+
+# Opciones Y comandos para el subcomando 'p'
+complete -c mcparch -n "__fish_seen_subcommand_from p" -l get -d "Busca e instala plugins desde repositorios" -r -a "(__mcparch_get_plugin_repos)"
+complete -c mcparch -n "__fish_seen_subcommand_from p" -l add -d "Instala un plugin desde un paquete .tar.gz" -r
+complete -c mcparch -n "__fish_seen_subcommand_from p" -l remove -d "Desinstala un plugin por su comando" -r -a "(__mcparch_get_installed_plugins)"
+complete -c mcparch -n "__fish_seen_subcommand_from p" -l list -d "Lista todos los plugins instalados"
+complete -c mcparch -n "__fish_seen_subcommand_from p" -a "(__mcparch_get_installed_plugins)" -d "Ejecuta un comando de plugin"
+
+
 # --- Opciones Principales ---
 complete -c mcparch -n "__fish_use_subcommand" -s h -l help -d "Muestra el mensaje de ayuda"
 complete -c mcparch -n "__fish_use_subcommand" -s i -l interactive -d "Abre el menú interactivo"

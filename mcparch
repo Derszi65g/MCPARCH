@@ -402,6 +402,9 @@ function get_apk_path() {
 }
 
 function do_add_version() {
+    local apk_path_arg="${1-}"
+    local preselected_id="${2-}"
+
     print_info "Añadiendo una nueva versión de Minecraft..."
     # MEJORA: Usar ruta absoluta para no depender del PATH
     local extractor_bin="/usr/local/bin/mcpelauncher-extract"
@@ -413,7 +416,7 @@ function do_add_version() {
     fi
 
     local apk_path
-    apk_path=$(get_apk_path "${1-}") # Pasamos el posible argumento (ruta del apk)
+    apk_path=$(get_apk_path "$apk_path_arg") # Pasamos el posible argumento (ruta del apk)
     # Si get_apk_path no devuelve nada (ej. el usuario cancela), salimos.
     if [ -z "$apk_path" ]; then
         print_info "Operación de añadir versión cancelada."
@@ -421,18 +424,28 @@ function do_add_version() {
     fi
 
     local version_id
-    while true; do
-        read -p "Ingresa un ID único para esta versión (ej: 1.20.x.x): " version_id
-        if [ -z "$version_id" ]; then
-            print_error "El ID no puede estar vacío."
-            continue
-        fi
+    if [ -n "$preselected_id" ]; then
+        version_id="$preselected_id"
+        print_info "Usando ID del repositorio: '$version_id'"
         if [ -f "$VERSIONS_DB_DIR/$version_id" ]; then
-            print_error "El ID '$version_id' ya existe. Por favor, elige otro."
-        else
-            break
+            print_error "El ID de versión '$version_id' ya existe en tu sistema."
+            print_info "Si deseas reemplazarla, primero elimínala con: mcparch --remove '$version_id'"
+            exit 1
         fi
-    done
+    else
+        while true; do
+            read -p "Ingresa un ID único para esta versión (ej: 1.20.x.x): " version_id
+            if [ -z "$version_id" ]; then
+                print_error "El ID no puede estar vacío."
+                continue
+            fi
+            if [ -f "$VERSIONS_DB_DIR/$version_id" ]; then
+                print_error "El ID '$version_id' ya existe. Por favor, elige otro."
+            else
+                break
+            fi
+        done
+    fi
 
     local target_dir="$HOME/.local/share/mcpelauncher/versions/$version_id"
     if [ -d "$target_dir" ]; then
@@ -517,6 +530,13 @@ function do_list_versions() {
     return 0
 }
 
+function load_config() {
+    if [ -f "$CONFIG_FILE" ]; then
+        # shellcheck source=/dev/null
+        source "$CONFIG_FILE"
+    fi
+}
+
 function ensure_config_exists() {
     if [ ! -f "$CONFIG_FILE" ]; then
         print_info "Creando archivo de configuración por primera vez..."
@@ -525,13 +545,21 @@ function ensure_config_exists() {
         print_success "Archivo de configuración creado en '$CONFIG_FILE'."
     fi
 
-    # NUEVO: Asegurarse de que el archivo de repositorios también exista.
     if [ ! -f "$REPOSITORIES_CONF_FILE" ]; then
         print_info "Creando archivo de repositorios por primera vez..."
-        # El archivo se crea vacío. El usuario debe añadir los repositorios manualmente.
         touch "$REPOSITORIES_CONF_FILE"
         print_success "Archivo de repositorios creado en '$REPOSITORIES_CONF_FILE'."
         print_info "Añade tu primer repositorio con: mcparch --add-repo <URL>"
+    fi
+
+    # NUEVO: Asegurar que la infraestructura de plugins exista
+    if [ ! -d "$CONFIG_DIR/plugins" ]; then
+        print_info "Creando directorio de plugins..."
+        mkdir -p "$CONFIG_DIR/plugins"
+        print_success "Directorio de plugins creado en '$CONFIG_DIR/plugins'."
+    fi
+    if [ ! -f "$CONFIG_DIR/plugins.conf" ]; then
+        touch "$CONFIG_DIR/plugins.conf"
     fi
 }
 
@@ -675,6 +703,9 @@ function run_game() {
         exit 1
     fi
     print_info "Iniciando Minecraft desde '$game_path'..."
+    # Añadir /usr/local/bin al PATH para asegurar que mcpelauncher-client
+    # pueda encontrar mcpelauncher-webview, especialmente al lanzar desde un acceso directo.
+    export PATH="/usr/local/bin:$PATH"
     /usr/local/bin/mcpelauncher-client -dg "$game_path" || true
     print_success "El juego se ha cerrado."
 }
@@ -697,7 +728,7 @@ function do_add_repo() {
     trap 'rm -f "$temp_json"' RETURN
 
     print_info "Descargando y validando el repositorio..."
-    if ! curl -L -f -s "$url" -o "$temp_json"; then
+    if ! curl -L -f -s -H "Cache-Control: no-cache" -H "Pragma: no-cache" "$url" -o "$temp_json"; then
         print_error "No se pudo descargar el archivo desde la URL."
         print_warning "Verifica que la URL es correcta y que tu conexión a internet funciona."
         exit 1
@@ -713,6 +744,10 @@ function do_add_repo() {
     local repo_name
     repo_name=$(jq -r '.repository.name' "$temp_json")
 
+    # NUEVO: Extraer el tipo de repositorio, con fallback para repos antiguos
+    local repo_type
+    repo_type=$(jq -r '.repository.type // "precompiled"' "$temp_json")
+
     # Comprobar si el nombre o la URL ya existen
     if grep -q -F "\"$repo_name\"" "$REPOSITORIES_CONF_FILE"; then
         print_error "Ya existe un repositorio con el nombre '$repo_name'."
@@ -723,9 +758,9 @@ function do_add_repo() {
         exit 1
     fi
 
-    # Añadir al archivo de configuración
-    echo "\"$repo_name\" $url" >> "$REPOSITORIES_CONF_FILE"
-    print_success "¡Repositorio '$repo_name' añadido correctamente!"
+    # Añadir al archivo de configuración con el nuevo formato
+    echo "\"$repo_name\" $url $repo_type" >> "$REPOSITORIES_CONF_FILE"
+    print_success "¡Repositorio '$repo_name' (tipo: $repo_type) añadido correctamente!"
 }
 
 function do_remove_repo() {
@@ -766,36 +801,31 @@ function do_list_repos() {
     fi
 
     while read -r line || [ -n "$line" ]; do
-        # Ignorar líneas vacías
         [ -z "$line" ] && continue
 
-        # Extraer URL (todo después del segundo espacio) y Nombre (entre comillas)
-        local url
-        url=$(echo "$line" | cut -d '"' -f 3 | sed 's/^ *//') # Corta por comillas, toma el 3er campo y quita espacios iniciales
-        local local_name
+        local local_name url repo_type
         local_name=$(echo "$line" | cut -d '"' -f 2)
+        local rest=$(echo "$line" | cut -d '"' -f 3 | sed 's/^ *//')
+        url=$(echo "$rest" | awk '{print $1}')
+        repo_type=$(echo "$rest" | awk '{print $2}')
+        [ -z "$repo_type" ] && repo_type="precompiled"
 
         echo -n "  " # Indentación
 
-        local temp_json
-        temp_json=$(mktemp)
+        local temp_json=$(mktemp)
         
-        # Intentar descargar el JSON
-        if curl -s -L -f "$url" -o "$temp_json"; then
-            # Si la descarga es exitosa, verificar el nombre remoto
-            local remote_name
-            remote_name=$(jq -r '.repository.name' "$temp_json" 2>/dev/null)
+        if curl -s -L -f -H "Cache-Control: no-cache" -H "Pragma: no-cache" "$url" -o "$temp_json"; then
+            local remote_name=$(jq -r '.repository.name' "$temp_json" 2>/dev/null)
 
             if [ "$local_name" = "$remote_name" ]; then
-                echo -e "\\e[32m[OK]\\e[0m         '$local_name' ($url)"
+                echo -e "\e[32m[OK]\e[0m         '$local_name' (tipo: $repo_type) - $url"
             elif [ -n "$remote_name" ]; then
-                echo -e "\\e[33m[RENOMBRADO]\\e[0m '$local_name' ahora es '$remote_name' ($url)"
+                echo -e "\e[33m[RENOMBRADO]\e[0m '$local_name' ahora es '$remote_name' (tipo: $repo_type) - $url"
             else
-                echo -e "\\e[31m[FALLIDO]\\e[0m    '$local_name' ($url) - Error: JSON inválido"
+                echo -e "\e[31m[FALLIDO]\e[0m    '$local_name' (tipo: $repo_type) - $url - Error: JSON inválido"
             fi
         else
-            # Si la descarga falla
-            echo -e "\\e[31m[FALLIDO]\\e[0m    '$local_name' ($url) - Error: No se pudo acceder a la URL"
+            echo -e "\e[31m[FALLIDO]\e[0m    '$local_name' (tipo: $repo_type) - $url - Error: No se pudo acceder a la URL"
         fi
         rm -f "$temp_json"
     done < "$REPOSITORIES_CONF_FILE"
@@ -814,54 +844,49 @@ function do_sync_repos() {
 
     local changes_made=false
 
-    while read -r line || [ -n "$line" ]; do
+    while IFS= read -r line <&3 || [ -n "$line" ]; do
         [ -z "$line" ] && continue
 
-        local url
-        url=$(echo "$line" | cut -d '"' -f 3 | sed 's/^ *//')
-        local local_name
+        local local_name url repo_type
         local_name=$(echo "$line" | cut -d '"' -f 2)
+        local rest=$(echo "$line" | cut -d '"' -f 3 | sed 's/^ *//')
+        url=$(echo "$rest" | awk '{print $1}')
+        repo_type=$(echo "$rest" | awk '{print $2}')
+        [ -z "$repo_type" ] && repo_type="precompiled"
 
-        local temp_json
-        temp_json=$(mktemp)
-        
-        if curl -s -L -f "$url" -o "$temp_json"; then
-            local remote_name
-            remote_name=$(jq -r '.repository.name' "$temp_json" 2>/dev/null)
+        local temp_json=$(mktemp)
+        if curl -s -L -f -H "Cache-Control: no-cache" -H "Pragma: no-cache" "$url" -o "$temp_json"; then
+            local remote_name=$(jq -r '.repository.name' "$temp_json" 2>/dev/null)
 
             if [ "$local_name" = "$remote_name" ]; then
-                echo "\"$local_name\" $url" >> "$temp_conf" # Mantener la línea
+                echo "\"$local_name\" $url $repo_type" >> "$temp_conf" # Mantener la línea
             elif [ -n "$remote_name" ]; then
                 print_warning "El repositorio '$local_name' ha sido renombrado a '$remote_name'."
                 read -p "¿Deseas actualizar el nombre en tu configuración local? (S/n): " choice
                 if [[ "$choice" =~ ^[Ss]*$ ]]; then
-                    echo "\"$remote_name\" $url" >> "$temp_conf"
+                    echo "\"$remote_name\" $url $repo_type" >> "$temp_conf"
                     print_success "Nombre actualizado."
                     changes_made=true
                 else
-                    echo "\"$local_name\" $url" >> "$temp_conf" # Mantener el nombre antiguo
+                    echo "\"$local_name\" $url $repo_type" >> "$temp_conf" # Mantener el nombre antiguo
                 fi
             else
-                # JSON inválido
                 print_error "El repositorio '$local_name' ($url) parece estar corrupto (JSON inválido)."
-                echo "\"$local_name\" $url" >> "$temp_conf" # Mantener la línea por ahora
+                echo "\"$local_name\" $url $repo_type" >> "$temp_conf" # Mantener la línea por ahora
             fi
         else
-            # Falla de red
             print_error "El repositorio '$local_name' ($url) ha fallado (no se pudo acceder)."
             read -p "¿Deseas eliminarlo de tu configuración? (s/N): " choice
             if [[ "$choice" =~ ^[Ss]$ ]]; then
                 print_success "Repositorio eliminado."
                 changes_made=true
-                # No añadir la línea a temp_conf para eliminarlo
             else
-                echo "\"$local_name\" $url" >> "$temp_conf" # Mantener la línea
+                echo "\"$local_name\" $url $repo_type" >> "$temp_conf" # Mantener la línea
             fi
         fi
         rm -f "$temp_json"
-    done < "$REPOSITORIES_CONF_FILE"
+    done 3< "$REPOSITORIES_CONF_FILE"
 
-    # Aplicar los cambios si los hubo
     if [ "$changes_made" = true ]; then
         mv "$temp_conf" "$REPOSITORIES_CONF_FILE"
         print_success "Sincronización completada."
@@ -885,34 +910,38 @@ function do_get_binary() {
 
     local consolidated_json
     consolidated_json=$(mktemp)
-    # Añadir la limpieza del temp file al trap
     trap 'rm -f "$consolidated_json"; stop_spinner' RETURN
-
     echo "[]" > "$consolidated_json"
 
     while read -r line || [ -n "$line" ]; do
         [ -z "$line" ] && continue
-        local url
-        url=$(echo "$line" | cut -d '"' -f 3 | sed 's/^ *//')
-        local repo_name
+
+        local repo_name url repo_type
         repo_name=$(echo "$line" | cut -d '"' -f 2)
+        local rest=$(echo "$line" | cut -d '"' -f 3 | sed 's/^ *//')
+        url=$(echo "$rest" | awk '{print $1}')
+        repo_type=$(echo "$rest" | awk '{print $2}')
+
+        # Para compatibilidad con repositorios antiguos sin tipo, se asume precompiled
+        [ -z "$repo_type" ] && repo_type="precompiled"
+
+        # OPTIMIZACIÓN: Saltar si el tipo no es el correcto ANTES de descargar
+        if [ "$repo_type" != "precompiled" ]; then
+            continue
+        fi
 
         if [ -n "$filter_repo_name" ] && [ "$repo_name" != "$filter_repo_name" ]; then
             continue
         fi
 
-        local temp_json
-        temp_json=$(mktemp)
-        
+        local temp_json=$(mktemp)
         if curl -s -L -f "$url" -o "$temp_json"; then
             local binaries
-            # Se protege la llamada a jq para evitar que el script termine si el JSON es inválido
             binaries=$(jq --arg repo_name "$repo_name" --arg repo_url "$url" \
                 '.precompiled | to_entries | map(.value + {key: .key, repo_name: $repo_name, repo_url: $repo_url})' "$temp_json" 2>/dev/null) || binaries=""
             
             if [ -n "$binaries" ] && [ "$binaries" != "null" ]; then
-                local new_consolidated_json
-                new_consolidated_json=$(mktemp)
+                local new_consolidated_json=$(mktemp)
                 jq --slurpfile binaries <(echo "$binaries") '. + $binaries[0]' "$consolidated_json" > "$new_consolidated_json"
                 mv "$new_consolidated_json" "$consolidated_json"
             fi
@@ -929,34 +958,21 @@ function do_get_binary() {
         if [ -n "$filter_repo_name" ]; then
             print_error "No se encontraron binarios en el repositorio '$filter_repo_name'."
         else
-            print_error "No se encontraron binarios en ningún repositorio configurado."
+            print_error "No se encontraron binarios en ningún repositorio de tipo 'precompiled' configurado."
         fi
         exit 1
     fi
 
-    local arch
-    arch=$(uname -m)
-    
-    local ids=()
-    local descriptions=()
-    local repo_names=()
-    local recommendations=()
-
-    local max_id_len=2
-    local max_desc_len=11
-    local max_repo_len=11
+    local arch=$(uname -m)
+    local ids=() descriptions=() repo_names=() recommendations=()
+    local max_id_len=2 max_desc_len=11 max_repo_len=11
     
     for i in $(seq 0 $((binary_count - 1))); do
-        local binary_info
-        binary_info=$(jq ".[$i]" "$consolidated_json")
-        local key
-        key=$(echo "$binary_info" | jq -r '.key')
-        local description
-        description=$(echo "$binary_info" | jq -r '.description')
-        local repo_name
-        repo_name=$(echo "$binary_info" | jq -r '.repo_name')
-        local compatibility
-        compatibility=$(echo "$binary_info" | jq -r '.compatibility.architectures[]' 2>/dev/null)
+        local binary_info=$(jq ".[$i]" "$consolidated_json")
+        local key=$(echo "$binary_info" | jq -r '.key')
+        local description=$(echo "$binary_info" | jq -r '.description')
+        local repo_name=$(echo "$binary_info" | jq -r '.repo_name')
+        local compatibility=$(echo "$binary_info" | jq -r '.compatibility.architectures[]' 2>/dev/null)
         
         ids+=("$key")
         descriptions+=("$description")
@@ -972,21 +988,15 @@ function do_get_binary() {
 
         if [ ${#key} -gt $max_id_len ]; then max_id_len=${#key}; fi
         if [ ${#description} -gt $max_desc_len ]; then max_desc_len=${#description}; fi
-        
         local repo_display_len=${#repo_name}
-        if [ "$is_recommended" = true ]; then
-            repo_display_len=$((repo_display_len + 14))
-        fi
+        if [ "$is_recommended" = true ]; then repo_display_len=$((repo_display_len + 14)); fi
         if [ $repo_display_len -gt $max_repo_len ]; then max_repo_len=$repo_display_len; fi
     done
 
     echo
-
-    # Imprimir cabecera
     printf "  %-4s %-${max_id_len}s   %-${max_desc_len}s   %-${max_repo_len}s\n" "#" "ID" "DESCRIPCIÓN" "REPOSITORIO"
     printf "  %s   %s   %s   %s\n" "$(printf -- '-%.0s' {1..2})" "$(printf -- '-%.0s' $(seq 1 $max_id_len))" "$(printf -- '-%.0s' $(seq 1 $max_desc_len))" "$(printf -- '-%.0s' $(seq 1 $max_repo_len))"
 
-    # Imprimir filas
     for i in "${!ids[@]}"; do
         local repo_with_reco="${repo_names[$i]}${recommendations[$i]}"
         printf "  %-2s) %-${max_id_len}s   %-${max_desc_len}s   %b\n" "$((i+1))" "${ids[$i]}" "${descriptions[$i]}" "$repo_with_reco"
@@ -1002,12 +1012,9 @@ function do_get_binary() {
 
         if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "$binary_count" ]; then
             local selected_index=$((choice - 1))
-            local selected_binary
-            selected_binary=$(jq ".[$selected_index]" "$consolidated_json")
-            local download_url
-            download_url=$(echo "$selected_binary" | jq -r '.url')
-            local temp_file
-            temp_file=$(mktemp --suffix=.tar.gz)
+            local selected_binary=$(jq ".[$selected_index]" "$consolidated_json")
+            local download_url=$(echo "$selected_binary" | jq -r '.url')
+            local temp_file=$(mktemp --suffix=.tar.gz)
             
             print_info "Descargando binario..."
             if ! curl -L -f --progress-bar "$download_url" -o "$temp_file"; then
@@ -1059,7 +1066,7 @@ function do_export_precompiled() {
     echo "$extractor_manifest" >> "$temp_raw_list"
 
     # 2. Sanear la lista para corregir líneas rotas
-    sed -e 's|\\(/usr\\)|\\n\\1|g' -e 's|\\(/home\\)|\\n\\1|g' "$temp_raw_list" | sed '/^$/d' > "$temp_clean_list"
+    sed -e 's|/usr|\n/usr|g' -e 's|/home|\n/home|g' "$temp_raw_list" | sed '/^$/d' > "$temp_clean_list"
     print_info "Lista de archivos saneada y lista para empaquetar."
 
     # 3. Determinar la ruta de salida final
@@ -1301,6 +1308,12 @@ function show_usage() {
     echo "  -ri, --rename <ID_A> <ID_N>    Renombra el ID de una versión (Antiguo -> Nuevo)."
     echo "  -cs, --shortcut <ID> [-ic, --icon <R>]  Crea o actualiza un acceso directo."
     echo "  -ad, --add-gui               Añade una versión usando un selector de archivos gráfico."
+    echo
+    echo "Gestión de Plugins:"
+    echo "  p --get [<REPO>]             Busca, instala o actualiza plugins desde repositorios."
+    echo "  p --add <RUTA.tar.gz>        Instala un nuevo plugin desde un paquete."
+    echo "  p --remove <COMANDO>         Desinstala un plugin por su comando."
+    echo "  p --list                     Lista todos los plugins instalados."
     echo
     echo "Binarios Precompilados:"
     echo "  -gb, --get-binary [<REPO>]   Descarga e instala un binario desde un repositorio."
@@ -1700,6 +1713,274 @@ function do_run_specific() {
     run_game "$game_path"
 }
 
+# --- NUEVO: Funciones de Gestión de Plugins ---
+
+function do_plugin_add() {
+    local package_path="$1"
+    if [ -z "$package_path" ] || [ ! -f "$package_path" ]; then
+        print_error "Se requiere la ruta a un paquete de plugin (.tar.gz) válido."
+        print_info "Uso: $0 p --add <ruta/al/plugin.tar.gz>"
+        exit 1
+    fi
+
+    local temp_dir
+    temp_dir=$(mktemp -d)
+    trap 'rm -rf "$temp_dir"' RETURN
+
+    print_info "Extrayendo paquete de plugin..."
+    if ! tar -xzf "$package_path" -C "$temp_dir"; then
+        print_error "No se pudo extraer el paquete. Asegúrate de que es un archivo .tar.gz válido."
+        exit 1
+    fi
+
+    local manifest_path="$temp_dir/plugin.json"
+    if [ ! -f "$manifest_path" ]; then
+        print_error "El paquete no contiene un manifiesto 'plugin.json'."
+        exit 1
+    fi
+
+    print_info "Validando manifiesto..."
+    local command script_file
+    command=$(jq -r '.command' "$manifest_path")
+    script_file=$(jq -r '.script' "$manifest_path")
+
+    if [ -z "$command" ] || [ "$command" = "null" ]; then print_error "El manifiesto debe definir un 'command'."; exit 1; fi
+    if [ -z "$script_file" ] || [ "$script_file" = "null" ]; then print_error "El manifiesto debe definir un 'script'."; exit 1; fi
+    if [ ! -f "$temp_dir/$script_file" ]; then print_error "El script '$script_file' definido en el manifiesto no se encontró en el paquete."; exit 1; fi
+
+    # Comprobar si el comando ya está registrado
+    if grep -q -E "^$command:" "$CONFIG_DIR/plugins.conf"; then
+        print_error "Un plugin con el comando '$command' ya está instalado."
+        print_info "Si quieres actualizarlo, elimínalo primero con: $0 p --remove $command"
+        exit 1
+    fi
+
+    local plugin_dest_dir="$CONFIG_DIR/plugins/$command"
+    print_info "Instalando plugin '$command' en '$plugin_dest_dir'..."
+    mkdir -p "$plugin_dest_dir"
+    cp -r "$temp_dir"/* "$plugin_dest_dir/"
+    chmod +x "$plugin_dest_dir/$script_file"
+
+    local script_abs_path="$plugin_dest_dir/$script_file"
+    echo "$command:$script_abs_path" >> "$CONFIG_DIR/plugins.conf"
+
+    print_success "¡Plugin '$command' instalado correctamente!"
+    print_info "Ahora puedes ejecutarlo con: $0 p $command"
+}
+
+function do_plugin_remove() {
+    local command_to_remove="$1"
+    if [ -z "$command_to_remove" ]; then
+        print_error "Se requiere el nombre del comando del plugin a desinstalar."
+        print_info "Uso: $0 p --remove <comando>"
+        exit 1
+    fi
+
+    local plugins_conf="$CONFIG_DIR/plugins.conf"
+    if ! grep -q -E "^$command_to_remove:" "$plugins_conf"; then
+        print_error "El plugin con el comando '$command_to_remove' no está instalado."
+        exit 1
+    fi
+
+    print_info "Desinstalando plugin '$command_to_remove'..."
+    local script_path
+    script_path=$(grep -E "^$command_to_remove:" "$plugins_conf" | cut -d':' -f2-)
+    local plugin_dir
+    plugin_dir=$(dirname "$script_path")
+
+    if [ -d "$plugin_dir" ]; then
+        rm -rf "$plugin_dir"
+        print_success "Archivos del plugin eliminados."
+    fi
+
+    local temp_conf
+    temp_conf=$(mktemp)
+    grep -v -E "^$command_to_remove:" "$plugins_conf" > "$temp_conf"
+    mv "$temp_conf" "$plugins_conf"
+    print_success "Registro del plugin eliminado."
+    print_success "¡Plugin '$command_to_remove' desinstalado!"
+}
+
+function do_plugin_list() {
+    local plugins_conf="$CONFIG_DIR/plugins.conf"
+    if [ ! -s "$plugins_conf" ]; then
+        print_warning "No hay plugins instalados."
+        print_info "Usa '$0 p --add <ruta.tar.gz>' para instalar tu primer plugin."
+        return
+    fi
+
+    print_info "Listando plugins instalados:"
+    
+    # Leer el archivo y preparar datos para una tabla
+    local commands=() descriptions=() versions=()
+    local max_cmd_len=7 max_ver_len=7 max_desc_len=11
+
+    while IFS=':' read -r command path || [ -n "$command" ]; do
+        [ -z "$command" ] && continue
+        local manifest_path="$(dirname "$path")/plugin.json"
+
+        local ver="N/A" desc="N/A"
+        if [ -f "$manifest_path" ]; then
+            ver=$(jq -r '.version // "N/A"' "$manifest_path")
+            desc=$(jq -r '.description // "N/A"' "$manifest_path")
+        fi
+        
+        commands+=("$command")
+        versions+=("$ver")
+        descriptions+=("$desc")
+
+        if [ ${#command} -gt $max_cmd_len ]; then max_cmd_len=${#command}; fi
+        if [ ${#ver} -gt $max_ver_len ]; then max_ver_len=${#ver}; fi
+        if [ ${#desc} -gt $max_desc_len ]; then max_desc_len=${#desc}; fi
+    done < "$plugins_conf"
+
+    # Imprimir cabecera
+    printf "\n  %-${max_cmd_len}s   %-${max_ver_len}s   %s\n" "COMANDO" "VERSIÓN" "DESCRIPCIÓN"
+    printf "  %s   %s   %s\n" "$(printf -- '-%.0s' $(seq 1 $max_cmd_len))" "$(printf -- '-%.0s' $(seq 1 $max_ver_len))" "$(printf -- '-%.0s' $(seq 1 $max_desc_len))"
+
+    # Imprimir filas
+    for i in "${!commands[@]}"; do
+        printf "  %-${max_cmd_len}s   %-${max_ver_len}s   %s\n" "${commands[$i]}" "${versions[$i]}" "${descriptions[$i]}"
+    done
+    echo
+}
+
+function do_plugin_get() {
+    local filter_repo_name="${1-}"
+    start_spinner
+
+    # 1. Obtener lista de plugins remotos
+    local remote_plugins_json=$(mktemp)
+    trap 'rm -f "$remote_plugins_json"' RETURN
+    echo "[]" > "$remote_plugins_json"
+
+    while IFS= read -r line <&3; do
+        [ -z "$line" ] && continue
+        local repo_name url repo_type
+        repo_name=$(echo "$line" | cut -d '"' -f 2)
+        local rest=$(echo "$line" | cut -d '"' -f 3 | sed 's/^ *//')
+        url=$(echo "$rest" | awk '{print $1}')
+        repo_type=$(echo "$rest" | awk '{print $2}')
+
+        if [ "${repo_type:-''}" != "plugins" ]; then continue; fi
+        if [ -n "$filter_repo_name" ] && [ "$repo_name" != "$filter_repo_name" ]; then continue; fi
+
+        local temp_json=$(mktemp)
+        if curl -s -L -f -H "Cache-Control: no-cache" "$url" -o "$temp_json"; then
+            local temp_array=$(mktemp)
+            jq --arg repo_name "$repo_name" '.plugins | to_entries | map(.value + {command: .key, repo_name: $repo_name})' "$temp_json" > "$temp_array"
+            jq -s '.[0] + .[1]' "$remote_plugins_json" "$temp_array" > "${remote_plugins_json}.tmp" && mv "${remote_plugins_json}.tmp" "$remote_plugins_json"
+            rm "$temp_array"
+        fi
+        rm "$temp_json"
+    done 3< "$REPOSITORIES_CONF_FILE"
+
+    # 2. Obtener lista de plugins instalados
+    declare -A installed_plugins
+    if [ -s "$CONFIG_DIR/plugins.conf" ]; then
+        while IFS=':' read -r command path || [ -n "$command" ]; do
+            [ -z "$command" ] && continue
+            local manifest_path="$(dirname "$path")/plugin.json"
+            if [ -f "$manifest_path" ]; then
+                installed_plugins["$command"]=$(jq -r '.version // "0.0.0"' "$manifest_path")
+            fi
+        done < "$CONFIG_DIR/plugins.conf"
+    fi
+
+    local remote_list=$(cat "$remote_plugins_json")
+    stop_spinner
+
+    local remote_count=$(echo "$remote_list" | jq 'length')
+    if [ "$remote_count" -eq 0 ]; then
+        print_error "No se encontraron plugins en ningún repositorio de tipo 'plugins'."; exit 1;
+    fi
+
+    # 3. Comparar y preparar los datos para la tabla
+    local commands=() remote_versions=() descriptions=() statuses=() urls=()
+    local max_cmd_len=7 max_ver_len=7 max_status_len=6 max_desc_len=11
+
+    for i in $(seq 0 $((remote_count - 1))); do
+        local plugin_info=$(echo "$remote_list" | jq ".[$i]")
+        local cmd=$(echo "$plugin_info" | jq -r '.command')
+        local remote_ver=$(echo "$plugin_info" | jq -r '.version')
+        local desc=$(echo "$plugin_info" | jq -r '.description')
+        local local_ver=${installed_plugins[$cmd]:-""}
+        local url=$(echo "$plugin_info" | jq -r '.url')
+        local status=""
+
+        if [ -z "$local_ver" ]; then
+            status="\e[32mInstalable\e[0m"
+        else
+            local latest_ver=$(printf "%s\n%s" "$remote_ver" "$local_ver" | sort -V | tail -n1)
+            if [ "$remote_ver" = "$local_ver" ]; then
+                status="\e[34mInstalado\e[0m"
+            elif [ "$latest_ver" = "$remote_ver" ]; then
+                status="\e[33mActualizable\e[0m ($local_ver -> $remote_ver)"
+            else
+                status="\e[34mInstalado\e[0m (local es superior)"
+            fi
+        fi
+        
+        commands+=("$cmd")
+        remote_versions+=("$remote_ver")
+        descriptions+=("$desc")
+        statuses+=("$status")
+        urls+=("$url")
+
+        # Calcular anchos máximos para el formato
+        if [ ${#cmd} -gt $max_cmd_len ]; then max_cmd_len=${#cmd}; fi
+        if [ ${#remote_ver} -gt $max_ver_len ]; then max_ver_len=${#remote_ver}; fi
+        if [ ${#desc} -gt $max_desc_len ]; then max_desc_len=${#desc}; fi
+        local status_len_no_color=$(echo -e "$status" | sed 's/\x1b\[[0-9;]*m//g' | wc -m)
+        if [ $status_len_no_color -gt $max_status_len ]; then max_status_len=$status_len_no_color; fi
+    done
+
+    # 4. Mostrar menú
+    printf "\n  %-${max_cmd_len}s   %-${max_ver_len}s   %-*s   %s\n" "COMANDO" "VERSIÓN" $max_status_len "ESTADO" "DESCRIPCIÓN"
+    printf "  %s   %s   %s   %s\n" "$(printf -- '-%.0s' $(seq 1 $max_cmd_len))" "$(printf -- '-%.0s' $(seq 1 $max_ver_len))" "$(printf -- '-%.0s' $(seq 1 $max_status_len))" "$(printf -- '-%.0s' $(seq 1 $max_desc_len))"
+
+    for i in "${!commands[@]}"; do
+        printf "  %-2s) %-${max_cmd_len}s   %-${max_ver_len}s   %-*b   %s\n" "$((i+1))" "${commands[$i]}" "${remote_versions[$i]}" $max_status_len "${statuses[$i]}" "${descriptions[$i]}"
+    done
+    echo
+
+    # 5. Procesar elección
+    while true; do
+        read -p "Elige un plugin para instalar/actualizar (o presiona Enter para cancelar): " choice
+        if [ -z "$choice" ]; then print_info "Operación cancelada."; exit 0; fi
+
+        if [[ "$choice" =~ ^[0-9]+$ ]] && [ "$choice" -ge 1 ] && [ "$choice" -le "$remote_count" ]; then
+            local i=$((choice - 1))
+            local cmd_to_install=$(echo "${details[i]}" | awk '{print $1}')
+            local url_to_download="${urls[i]}"
+            local status_raw=$(echo -e "${statuses[i]}")
+
+            if [[ "$status_raw" == *"Instalado"* ]]; then
+                print_info "El plugin '$cmd_to_install' ya está en su última versión."; exit 0;
+            fi
+
+            local temp_file=$(mktemp --suffix=.tar.gz)
+            print_info "Descargando paquete desde $url_to_download..."
+            if ! curl -L -f --progress-bar "$url_to_download" -o "$temp_file"; then
+                print_error "La descarga falló."; rm "$temp_file"; exit 1;
+            fi
+
+            if [[ "$status_raw" == *"Actualizable"* ]]; then
+                print_info "Actualizando plugin '$cmd_to_install'..."
+                do_plugin_remove "$cmd_to_install"
+            fi
+            
+            do_plugin_add "$temp_file"
+            rm "$temp_file"
+            exit 0
+        else
+            print_error "Opción no válida. Inténtalo de nuevo."
+        fi
+    done
+}
+
+
+
 function install_icon_if_needed() {
     local icon_name="mcparch"
     local icon_dir="$HOME/.local/share/icons/hicolor/scalable/apps"
@@ -2033,21 +2314,24 @@ function main() {
     mkdir -p "$CONFIG_DIR"
     mkdir -p "$VERSIONS_DB_DIR"
 
-    # Cargar configuración
-    ensure_config_exists
-    source "$CONFIG_FILE"
+# --- Procesamiento de Argumentos ---
 
-    if [ $# -eq 0 ]; then
-        do_launch
-        exit 0
-    fi
-
-
-
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
+    # ANTES de procesar argumentos, asegurar que la configuración existe.
+    # No se crea la configuración si el script se ejecuta como root (UID 0) para
+    # evitar crear archivos de configuración en /root.
+        if [ "$(id -u)" -ne 0 ]; then
+            ensure_config_exists
+            load_config
+        fi
+    
+        if [ $# -eq 0 ]; then
+            do_launch
+            return
+        fi
+    
+        while [[ $# -gt 0 ]]; do        case "$1" in
             -a|--add) 
-                if [[ -n "${2-}" && "$2" != -* ]]; then
+                if [[ -n "${2-}" && "${2-}" != -* ]]; then
                     do_add_version "$2"
                     shift 
                 else
@@ -2078,6 +2362,54 @@ function main() {
                 do_run_specific "$2"
                 exit 0
                 ;; 
+
+            p) # GESTOR DE PLUGINS
+                if [ "${2-}" = "--get" ]; then
+                    do_plugin_get "${3-}"
+                elif [ "${2-}" = "--add" ]; then
+                    _require_arg "p --add" "${3-}" "ruta.tar.gz"
+                    do_plugin_add "$3"
+                elif [ "${2-}" = "--remove" ]; then
+                    _require_arg "p --remove" "${3-}" "comando"
+                    do_plugin_remove "$3"
+                elif [ "${2-}" = "--list" ]; then
+                    do_plugin_list
+                else
+                    # Lógica de ejecución de plugins
+                    local plugin_cmd="${2-}"
+                    if [ -z "$plugin_cmd" ]; then
+                        print_error "Se requiere un comando de plugin."
+                        print_info "Uso: $0 p <comando>"
+                        exit 1
+                    fi
+
+                    local plugins_conf="$CONFIG_DIR/plugins.conf"
+                    if [ ! -s "$plugins_conf" ]; then
+                        print_error "Plugin '$plugin_cmd' no encontrado. No hay plugins instalados."
+                        exit 1
+                    fi
+
+                    # Cargar plugins en un array asociativo para búsqueda rápida
+                    declare -A plugin_map
+                    while IFS=':' read -r command path; do
+                        plugin_map["$command"]="$path"
+                    done < "$plugins_conf"
+
+                    if [[ -v plugin_map[$plugin_cmd] ]]; then
+                        local script_path="${plugin_map[$plugin_cmd]}"
+                        # Ejecutar el script del plugin, pasando el resto de argumentos
+                        shift 2 # Quitar 'p' y el comando del plugin de la lista de argumentos
+                        print_info "Ejecutando plugin '$plugin_cmd'..."
+                        "$script_path" "$@"
+                    else
+                        print_error "Plugin '$plugin_cmd' no encontrado."
+                        print_info "Usa '$0 p --list' para ver los plugins disponibles."
+                        exit 1
+                    fi
+                fi
+                exit 0
+                ;;
+
             -sd|--set-default) 
                 _require_arg "$1" "${2-}" "ID de versión"
                 do_set_default_version "$2"
@@ -2153,16 +2485,10 @@ function main() {
                 exit 0
                 ;; 
             # --- NUEVOS COMANDOS DE GESTIÓN DE REPOSITORIOS Y BINARIOS ---
-            -gb|--get-binary)
-                # Permite un argumento opcional para filtrar por repo
-                local repo_filter=""
-                if [[ -n "${2-}" && "$2" != -* ]]; then
-                    repo_filter="$2"
-                    shift
-                fi
-                do_get_binary "$repo_filter"
-                exit 0
-                ;;
+        -gb|--get-binary)
+            do_get_binary "${2-}"
+            ;;
+
             -ar|--add-repo)
                 _require_arg "$1" "${2-}" "URL"
                 do_add_repo "$2"
@@ -2201,5 +2527,4 @@ function main() {
     done
 }
 
-main "$@"
 main "$@"

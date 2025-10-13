@@ -14,7 +14,7 @@
 -   **Lanzador Inteligente:** Ejecuta tu versión favorita por defecto o te permite elegir cuál lanzar si tienes varias.
 -   **Menú Interactivo (TUI):** Una interfaz de texto amigable para acceder a todas las funciones sin necesidad de memorizar los comandos.
 -   **Integración con el Escritorio:** Crea y actualiza accesos directos `.desktop` en el menú de aplicaciones, permitiendo personalizar el icono.
--   **Autocompletado de Shell:** Instalación automática de autocompletado para **Bash y Fish**, con todos los nuevos comandos y alias.
+-   **Autocompletado de Shell:** Instalación automática de autocompletado para **Bash, Fish y Zsh**, con todos los nuevos comandos y alias.
 -   **Desinstalación Flexible:** Permite desinstalar solo el script o realizar una limpieza completa de todos los datos.
 
 # Vistazo Rápido
@@ -122,6 +122,9 @@ Esta sección explica en profundidad las funciones más importantes de `mcparch`
     -   También te pedirá la ruta al archivo `.apk` de Minecraft. **Importante:** Debe ser un `.apk` para la arquitectura **x86 o x86_64**, no los que se usan en teléfonos (ARM).
     -   Puedes pasar la ruta al `.apk` como argumento para saltarte la pregunta: `mcparch -a /ruta/a/mi/juego.apk`.
 
+-   **`mcparch -ad` (o `--add-gui`)**
+    -   Abre un selector de archivos gráfico (usando `zenity`) para que puedas elegir el `.apk` de forma visual, sin necesidad de escribir la ruta a mano.
+
 -   **`mcparch -d <ID>` (o `--remove <ID>`)**
     -   **¡Comando destructivo!** Elimina permanentemente una versión, incluyendo su directorio de datos (mundos, texturas, configuraciones...). Siempre te pedirá una confirmación antes de borrar nada.
 
@@ -157,6 +160,15 @@ Esta es la forma más rápida de tener `mcpelauncher` funcional, saltándote la 
 -   **`mcparch -ep <RUTA>` (o `--export <RUTA>`)**
     -   Si has compilado los componentes con `-b`, este comando los empaqueta en un único archivo `.tar.gz`. Este archivo es "portable" y puedes usarlo con `-ip` en otra máquina para no tener que volver a compilar.
 
+### Gestión de Plugins
+
+MCPARCH ahora cuenta con un sistema de plugins para extender su funcionalidad.
+
+-   **`mcparch p --get [<REPO>]`**: Busca, instala o actualiza plugins desde repositorios.
+-   **`mcparch p --add <RUTA.tar.gz>`**: Instala un nuevo plugin desde un paquete.
+-   **`mcparch p --remove <COMANDO>`**: Desinstala un plugin por su comando.
+-   **`mcparch p --list`**: Lista todos los plugins instalados.
+
 ### Mantenimiento del Script
 
 -   **`mcparch -in` (o `--install`)**: Instala el script `mcparch` y el autocompletado en las carpetas del sistema para que puedas llamarlo desde cualquier terminal.
@@ -187,9 +199,15 @@ Gestión de Versiones:
   -l, --list                   Lista todas las versiones de Minecraft instaladas.
   -d, --remove <ID>            Elimina una versión específica por su ID.
   -sd, --set-default <ID>      Establece una versión como predeterminada.
-  -ri, --rename <ID_A> <ID_N>    Renombra el ID de una versión (Antiguo -> Nuevo).
+  -ri, --rename <ID_A> <ID_N>  Renombra el ID de una versión (Antiguo -> Nuevo).
   -cs, --shortcut <ID> [-ic, --icon <R>]  Crea o actualiza un acceso directo.
   -ad, --add-gui               Añade una versión usando un selector de archivos gráfico.
+
+Gestión de Plugins:
+  p --get [<REPO>]             Busca, instala o actualiza plugins desde repositorios.
+  p --add <RUTA.tar.gz>        Instala un nuevo plugin desde un paquete.
+  p --remove <COMANDO>         Desinstala un plugin por su comando.
+  p --list                     Lista todos los plugins instalados.
 
 Binarios Precompilados:
   -gb, --get-binary [<REPO>]   Descarga e instala un binario desde un repositorio.

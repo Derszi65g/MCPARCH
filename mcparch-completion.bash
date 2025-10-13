@@ -36,8 +36,52 @@ _mcparch_completions() {
     --export -ep \
     --import -ip \
     --icon -ic"
+    
+    local plugin_opts="--get --add --remove --list"
+    local main_commands="p"
 
     local versions_db_dir="$HOME/.config/mcparch/versions_db"
+    local plugins_conf_file="$HOME/.config/mcparch/plugins.conf"
+    local repos_conf_file="$HOME/.config/mcparch/repositories.conf"
+
+    # Manejo de subcomandos de plugins
+    if [ "$prev_word" = "p" ]; then
+        local installed_plugins=""
+        if [ -f "$plugins_conf_file" ]; then
+            installed_plugins=$(cut -d':' -f1 "$plugins_conf_file" | tr '\n' ' ')
+        fi
+        COMPREPLY=( $(compgen -W "${plugin_opts} ${installed_plugins}" -- "${cur_word}") )
+        return 0
+    fi
+
+    # Autocompletado para argumentos de subcomandos de plugins
+    if [[ ${COMP_CWORD} -gt 1 ]]; then
+        local command_before_prev="${COMP_WORDS[COMP_CWORD-2]}"
+        if [ "$command_before_prev" = "p" ]; then
+            case "$prev_word" in
+                --remove)
+                    if [ -f "$plugins_conf_file" ]; then
+                        local installed_plugins
+                        installed_plugins=$(cut -d':' -f1 "$plugins_conf_file")
+                        COMPREPLY=( $(compgen -W "${installed_plugins}" -- "${cur_word}") )
+                    fi
+                    return 0
+                    ;;
+                --add)
+                    COMPREPLY=( $(compgen -f -- "${cur_word}") ) # Autocompletado de archivos
+                    return 0
+                    ;;
+                --get)
+                    if [ -f "$repos_conf_file" ]; then
+                        local plugin_repos
+                        plugin_repos=$(awk '/plugins/ {gsub(/"/, "", $1); print $1}' "$repos_conf_file")
+                        COMPREPLY=( $(compgen -W "${plugin_repos}" -- "${cur_word}") )
+                    fi
+                    return 0
+                    ;;
+            esac
+        fi
+    fi
 
     # Sugerir IDs de versión si el comando anterior lo requiere
     case "$prev_word" in
@@ -68,10 +112,14 @@ _mcparch_completions() {
             ;;
     esac
 
-    # Sugerir las opciones disponibles si la palabra actual empieza con '-'
-    if [[ "${cur_word}" == -* ]]; then
-        COMPREPLY=( $(compgen -W "${all_opts}" -- "${cur_word}") )
-        return 0
+    # Sugerir las opciones principales o el comando 'p'
+    if [[ $COMP_CWORD -eq 1 ]]; then
+        COMPREPLY=( $(compgen -W "${all_opts} ${main_commands}" -- "${cur_word}") )
+    else
+        # Para otros argumentos, solo sugerir opciones si corresponde
+        if [[ "${cur_word}" == -* ]]; then
+            COMPREPLY=( $(compgen -W "${all_opts}" -- "${cur_word}") )
+        fi
     fi
 }
 
