@@ -2,7 +2,8 @@
   <a href="https://discord.gg/mwqYppvnVw"><img src="https://img.shields.io/badge/Comunidad_de_Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Comunidad de Discord" /></a>
   <br>
   <a href="https://deepwiki.com/Derszi65g/MCPARCH"><img src="https://deepwiki.com/badge.svg" alt="Ask DeepWiki"></a>
-</div># MCPARCH - Gestor y Lanzador Avanzado para Minecraft PE en Linux
+</div>
+# MCPARCH - Gestor y Lanzador Avanzado para Minecraft PE en Linux
 
 `mcparch` es un script de Bash todo-en-uno diseñado para compilar, gestionar y ejecutar múltiples versiones de Minecraft: Bedrock Edition (PE) en Linux de forma sencilla y robusta.
 
