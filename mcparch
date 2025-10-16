@@ -148,7 +148,7 @@ function check_dependencies() {
     print_error "Faltan dependencias esenciales: ${missing_deps[*]}"
     print_info "Por favor, instala estas herramientas usando el gestor de paquetes de tu sistema."
     print_info "Si no estás seguro de cómo hacerlo, puedes usar la opción '--install-deps' para que este script intente hacerlo por ti."
-    exit 1
+    return 1
 }
 
 function do_install_deps() {
@@ -2228,13 +2228,11 @@ function do_check() {
     local overall_status=0
 
     # --- 1. Dependencias ---
-    check_dependencies &> /dev/null
-    if [ $? -eq 0 ]; then
+    if check_dependencies; then
         echo -e "  \\e[32m✔\\e[0m Dependencias"
     else
         echo -e "  \\e[31m✖\\e[0m Dependencias"
         overall_status=1
-        error_messages+="[Dependencias] Faltan una o más dependencias. Ejecuta 'check_dependencies' para ver detalles.\\n"
     fi
 
     # --- 2. Componentes ---
