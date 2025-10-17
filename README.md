@@ -64,6 +64,40 @@ mcparch --install-deps
 ```
 Este comando detectará tu distribución de Linux e intentará instalar el grupo completo de paquetes necesarios.
 
+### Dependencias para Artix Linux
+
+La siguiente lista de paquetes ha sido probada y verificada para funcionar correctamente en Artix Linux. Puedes instalarlas todas de una vez con este comando:
+
+```bash
+sudo pacman -S cmake make clang pkgconf libzip qt5-webengine qt5-quickcontrols qt5-quickcontrols2 qt5-declarative qt5-location alsa-plugins
+```
+
+Después de instalar las dependencias, puedes compilar con: `mcparch -b`
+
+### Dependencias para Void Linux
+
+Para compilar `mcpelauncher` desde el código fuente en Void Linux, necesitarás instalar las siguientes dependencias:
+
+#### Dependencias necesarias para la compilación:
+
+```bash
+sudo xbps-install -S cmake make clang pkgconf libzip-devel curl openssl-devel libX11-devel wayland-devel wayland-protocols libxkbcommon-devel MesaLib-devel alsa-lib-devel eudev-libudev-devel libpng-devel libevdev-devel qt5-devel qt5-webengine-devel qt5-declarative-devel qt5-webchannel-devel qt5-location-devel libXi-devel libatomic-devel
+```
+
+#### Dependencias adicionales necesarias para que el juego funcione completamente (tiempo de ejecución):
+
+```bash
+sudo xbps-install -S alsa-plugins qt5-quickcontrols qt5-quickcontrols2-devel
+```
+
+#### Dependencias para usar un binario precompilado (alternativa):
+
+Si prefieres no compilar y usar un binario precompilado, necesitarás instalar las siguientes dependencias:
+
+```bash
+sudo xbps-install -S libatomic qt5-webengine qt5-quickcontrols2 qt5-quickcontrols alsa-plugins
+```
+
 ## Instalación y Primeros Pasos
 
 Para la mejor experiencia, instala `mcparch` como un comando de sistema.
