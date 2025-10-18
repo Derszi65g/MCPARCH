@@ -713,54 +713,108 @@ function run_game() {
 
 # --- NUEVO: Funciones de Gestión de Repositorios y Binarios ---
 
-function do_add_repo() {
+# Helper function to add a single repository from a URL.
+# Returns 0 on success or if the repo already exists, 1 on failure.
+function _add_single_repo_from_url() {
     local url="$1"
     if [ -z "$url" ]; then
-        print_error "Se requiere una URL al archivo 'sources.json' del repositorio."
-        print_info "Uso: $0 --add-repo <URL>"
-        exit 1
+        print_error "Se proporcionó una URL vacía en la lista."
+        return 1
     fi
 
-    print_info "Validando y añadiendo repositorio desde: $url"
+    # Ignorar líneas que no son URLs válidas
+    if [[ ! "$url" == http* ]]; then
+        print_warning "Omitiendo línea inválida (no es una URL HTTP/S): $url"
+        return 0
+    fi
+
+    print_info "Procesando repositorio desde: $url"
 
     local temp_json
     temp_json=$(mktemp)
-    trap 'rm -f "$temp_json"' RETURN
-
-    print_info "Descargando y validando el repositorio..."
+    
     if ! curl -L -f -s -H "Cache-Control: no-cache" -H "Pragma: no-cache" "$url" -o "$temp_json"; then
-        print_error "No se pudo descargar el archivo desde la URL."
-        print_warning "Verifica que la URL es correcta y que tu conexión a internet funciona."
-        exit 1
+        print_error "No se pudo descargar el archivo desde la URL: $url"
+        rm -f "$temp_json"
+        return 1
     fi
 
-    # Validar que es un JSON y extraer el nombre
     if ! jq -e '.repository.name' "$temp_json" > /dev/null; then
-        print_error "El archivo JSON no es válido o no contiene el campo '.repository.name'."
-        print_info "Asegúrate de que la URL apunta a un archivo 'sources.json' con el formato correcto."
-        exit 1
+        print_error "El archivo en '$url' no es un JSON válido o no tiene el formato correcto."
+        rm -f "$temp_json"
+        return 1
     fi
 
     local repo_name
     repo_name=$(jq -r '.repository.name' "$temp_json")
-
-    # NUEVO: Extraer el tipo de repositorio, con fallback para repos antiguos
     local repo_type
     repo_type=$(jq -r '.repository.type // "precompiled"' "$temp_json")
+    rm -f "$temp_json"
 
-    # Comprobar si el nombre o la URL ya existen
     if grep -q -F "\"$repo_name\"" "$REPOSITORIES_CONF_FILE"; then
-        print_error "Ya existe un repositorio con el nombre '$repo_name'."
-        exit 1
+        print_warning "El repositorio '$repo_name' ya existe. Omitiendo."
+        return 0
     fi
     if grep -q -F "$url" "$REPOSITORIES_CONF_FILE"; then
-        print_error "La URL '$url' ya está registrada en un repositorio."
+        print_warning "La URL '$url' ya está registrada. Omitiendo."
+        return 0
+    fi
+
+    echo "\"$repo_name\" $url $repo_type" >> "$REPOSITORIES_CONF_FILE"
+    print_success "¡Repositorio '$repo_name' (tipo: $repo_type) añadido correctamente!"
+    return 0
+}
+
+function do_add_repo() {
+    local source_ref="$1"
+    if [ -z "$source_ref" ]; then
+        print_error "Se requiere una URL o una ruta a un archivo .txt con una lista de URLs."
+        print_info "Uso: $0 --add-repo <URL_de_sources.json|URL_de_lista.txt|/ruta/a/lista.txt>"
         exit 1
     fi
 
-    # Añadir al archivo de configuración con el nuevo formato
-    echo "\"$repo_name\" $url $repo_type" >> "$REPOSITORIES_CONF_FILE"
-    print_success "¡Repositorio '$repo_name' (tipo: $repo_type) añadido correctamente!"
+    # Caso 1: Es una URL a un archivo .txt con una lista de repositorios
+    if [[ "$source_ref" == http*.txt ]]; then
+        print_info "Descargando lista de repositorios desde la URL '$source_ref'..."
+        local list_content
+        list_content=$(curl -L -f -s "$source_ref")
+        if [ -z "$list_content" ]; then
+            print_error "No se pudo descargar la lista o el archivo está vacío."
+            exit 1
+        fi
+        
+        local success_count=0
+        local total_count=0
+        while IFS= read -r repo_url; do
+            [[ -z "$repo_url" || "$repo_url" == \#* ]] && continue
+            total_count=$((total_count + 1))
+            if _add_single_repo_from_url "$repo_url"; then
+                success_count=$((success_count + 1))
+            fi
+            echo
+        done <<< "$list_content"
+        print_success "Procesamiento de lista remota completado. Se añadieron $success_count de $total_count repositorios válidos."
+
+    # Caso 2: Es un archivo .txt local con una lista de repositorios
+    elif [[ -f "$source_ref" && "$source_ref" == *.txt ]]; then
+        print_info "Procesando lista de repositorios desde el archivo local '$source_ref'..."
+        
+        local success_count=0
+        local total_count=0
+        while IFS= read -r repo_url; do
+            [[ -z "$repo_url" || "$repo_url" == \#* ]] && continue
+            total_count=$((total_count + 1))
+            if _add_single_repo_from_url "$repo_url"; then
+                success_count=$((success_count + 1))
+            fi
+            echo
+        done < "$source_ref"
+        print_success "Procesamiento de archivo local completado. Se añadieron $success_count de $total_count repositorios válidos."
+
+    # Caso 3: Es una URL a un único repositorio (comportamiento original)
+    else
+        _add_single_repo_from_url "$source_ref"
+    fi
 }
 
 function do_remove_repo() {
